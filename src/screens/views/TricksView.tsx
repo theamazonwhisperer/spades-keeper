@@ -22,6 +22,7 @@ import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import { monoFont } from '../../theme';
+import { haptic } from '../../utils/haptic';
 
 const nilLabel: Record<NilType, string | null> = {
   none: null,
@@ -36,8 +37,12 @@ export default function TricksView() {
   // useState must come before any early return (Rules of Hooks)
   const [tricks, setTricks] = useState<Record<string, number>>(() => {
     if (!currentGame) return {};
+    const existingRound = currentGame.rounds[currentGame.rounds.length - 1];
     const initial: Record<string, number> = {};
-    currentGame.players.forEach(p => { initial[p.id] = 0; });
+    currentGame.players.forEach(p => {
+      const existing = existingRound?.playerData.find(d => d.playerId === p.id)?.tricksTaken;
+      initial[p.id] = existing ?? 0;
+    });
     return initial;
   });
 
@@ -60,6 +65,7 @@ export default function TricksView() {
   const isValid = totalTricks === 13;
 
   const handleConfirm = () => {
+    haptic('confirm');
     submitTricks(
       currentGame.players.map(p => ({ playerId: p.id, tricksTaken: tricks[p.id] }))
     );
@@ -155,8 +161,12 @@ export default function TricksView() {
                     >
                       {score}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {bags} bag{bags !== 1 ? 's' : ''}
+                    <Typography
+                      variant="body2"
+                      color={bags >= 7 ? 'warning.main' : 'text.secondary'}
+                      sx={{ fontWeight: bags >= 7 ? 700 : 400 }}
+                    >
+                      {bags >= 7 && '⚠ '}{bags} bag{bags !== 1 ? 's' : ''}
                     </Typography>
                   </>
                 )}
@@ -251,7 +261,7 @@ export default function TricksView() {
                         }}
                       >
                         <IconButton
-                          onClick={() => updateTricks(player.id, -1)}
+                          onClick={() => { haptic('light'); updateTricks(player.id, -1); }}
                           disabled={trickCount <= 0}
                           sx={{
                             width: 48,
@@ -276,7 +286,7 @@ export default function TricksView() {
                           {trickCount}
                         </Typography>
                         <IconButton
-                          onClick={() => updateTricks(player.id, 1)}
+                          onClick={() => { haptic('light'); updateTricks(player.id, 1); }}
                           disabled={totalTricks >= 13}
                           sx={{
                             width: 48,

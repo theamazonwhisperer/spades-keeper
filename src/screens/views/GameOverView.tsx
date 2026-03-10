@@ -13,15 +13,18 @@ import {
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import HomeIcon from '@mui/icons-material/Home';
 import AddIcon from '@mui/icons-material/Add';
+import ReplayIcon from '@mui/icons-material/Replay';
+import ShareIcon from '@mui/icons-material/Share';
 import { useGameStore } from '../../store/gameStore';
 import { formatScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import { monoFont } from '../../theme';
+import { haptic } from '../../utils/haptic';
 
 export default function GameOverView() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { currentGame, abandonGame } = useGameStore();
+  const { currentGame, abandonGame, rematch } = useGameStore();
 
   if (!currentGame) return null;
 
@@ -30,12 +33,52 @@ export default function GameOverView() {
   const lastRound = completedRounds[completedRounds.length - 1];
 
   const handleNewGame = () => {
+    haptic('medium');
     abandonGame();
     navigate('/setup');
   };
 
+  const handleRematch = () => {
+    haptic('confirm');
+    rematch();
+    navigate('/game');
+  };
+
   const handleHome = () => {
     navigate('/');
+  };
+
+  const handleShare = async () => {
+    haptic('light');
+    const scores = lastRound?.teamScores ?? [];
+    const lines = [
+      `♠ SpadesKeeper`,
+      `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
+      `${completedRounds.length} round${completedRounds.length !== 1 ? 's' : ''}`,
+      ``,
+      ...scores.map(ts => {
+        const team = currentGame.teams.find(t => t.id === ts.teamId);
+        const flag = ts.teamId === currentGame.winnerId ? ' 🏆' : '';
+        return `${team?.name}: ${ts.cumulativeScore}${flag}`;
+      }),
+      ``,
+      winner ? `${winner.name} wins!` : `Game over`,
+    ];
+    const text = lines.join('\n');
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'SpadesKeeper', text });
+        return;
+      } catch {
+        // Fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Clipboard also unavailable — silently ignore
+    }
   };
 
   return (
@@ -201,19 +244,41 @@ export default function GameOverView() {
         variant="contained"
         size="large"
         fullWidth
-        startIcon={<AddIcon />}
-        onClick={handleNewGame}
+        startIcon={<ReplayIcon />}
+        onClick={handleRematch}
         sx={{ py: 1.8, mb: 1.5, fontSize: '1.05rem', minHeight: 56 }}
       >
-        New Game
+        Rematch
       </Button>
+      <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+        <Button
+          variant="outlined"
+          size="large"
+          fullWidth
+          startIcon={<ShareIcon />}
+          onClick={handleShare}
+          sx={{ py: 1.6, minHeight: 56 }}
+        >
+          Share
+        </Button>
+        <Button
+          variant="outlined"
+          size="large"
+          fullWidth
+          startIcon={<AddIcon />}
+          onClick={handleNewGame}
+          sx={{ py: 1.6, minHeight: 56 }}
+        >
+          New Game
+        </Button>
+      </Box>
       <Button
-        variant="outlined"
+        variant="text"
         size="large"
         fullWidth
         startIcon={<HomeIcon />}
         onClick={handleHome}
-        sx={{ py: 1.6, minHeight: 56 }}
+        sx={{ py: 1.2, minHeight: 48, color: 'text.secondary' }}
       >
         Home
       </Button>

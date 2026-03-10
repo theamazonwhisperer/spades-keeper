@@ -32,8 +32,10 @@ export default function SetupScreen() {
   const [p2, setP2] = useState('');
   const [p3, setP3] = useState('');
   const [p4, setP4] = useState('');
-  const [winTarget, setWinTarget] = useState<300 | 500>(500);
+  const [winTarget, setWinTarget] = useState<200 | 300 | 500>(500);
   const [maxRounds, setMaxRounds] = useState<'10' | 'unlimited'>('unlimited');
+  const [nilValue, setNilValue] = useState<50 | 100>(100);
+  const [blindNilValue, setBlindNilValue] = useState<100 | 200>(200);
 
   const canStart =
     teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim();
@@ -43,6 +45,8 @@ export default function SetupScreen() {
     const settings: GameSettings = {
       winTarget,
       maxRounds: maxRounds === '10' ? 10 : null,
+      nilValue,
+      blindNilValue,
     };
     startGame(
       [teamName1.trim(), teamName2.trim()],
@@ -202,12 +206,13 @@ export default function SetupScreen() {
             fullWidth
             size="medium"
           >
-            <ToggleButton value={300}>300 Points</ToggleButton>
-            <ToggleButton value={500}>500 Points</ToggleButton>
+            <ToggleButton value={200}>200</ToggleButton>
+            <ToggleButton value={300}>300</ToggleButton>
+            <ToggleButton value={500}>500</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 2.5 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
             Game Length
           </Typography>
@@ -220,6 +225,38 @@ export default function SetupScreen() {
           >
             <ToggleButton value="10">10 Rounds Max</ToggleButton>
             <ToggleButton value="unlimited">Play Until Won</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Box sx={{ mb: 2.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
+            Nil Value
+          </Typography>
+          <ToggleButtonGroup
+            value={nilValue}
+            exclusive
+            onChange={(_, v) => v && setNilValue(v)}
+            fullWidth
+            size="medium"
+          >
+            <ToggleButton value={50}>±50 pts</ToggleButton>
+            <ToggleButton value={100}>±100 pts</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
+            Blind Nil Value
+          </Typography>
+          <ToggleButtonGroup
+            value={blindNilValue}
+            exclusive
+            onChange={(_, v) => v && setBlindNilValue(v)}
+            fullWidth
+            size="medium"
+          >
+            <ToggleButton value={100}>±100 pts</ToggleButton>
+            <ToggleButton value={200}>±200 pts</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 

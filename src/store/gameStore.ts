@@ -7,6 +7,7 @@ import {
   GamePhase,
   Player,
   PlayerRoundData,
+  PlayerStats,
   Round,
   NilType,
 } from '../types';
@@ -21,6 +22,7 @@ interface BidInput {
 interface GameStore {
   currentGame: Game | null;
   completedGames: Game[];
+  playerStats: Record<string, PlayerStats>;
   darkMode: boolean;
 
   // Game lifecycle
@@ -30,11 +32,13 @@ interface GameStore {
     settings: GameSettings
   ) => void;
   abandonGame: () => void;
+  rematch: () => void;
 
   // Round flow
   submitBids: (bids: BidInput[]) => void;
-  fixBids: () => void; // Go back from tricks to bidding
+  fixBids: () => void;
   submitTricks: (tricks: { playerId: string; tricksTaken: number }[]) => void;
+  undoLastRound: () => void;
   startNextRound: () => void;
 
   // Renaming (allowed any time during active game)
@@ -54,6 +58,7 @@ export const useGameStore = create<GameStore>()(
     (set, get) => ({
       currentGame: null,
       completedGames: [],
+      playerStats: {},
       darkMode: true, // default to dark mode for card game feel
 
       startGame: (teamNames, playerNames, settings) => {
@@ -69,12 +74,18 @@ export const useGameStore = create<GameStore>()(
           { id: uuidv4(), name: playerNames[1][1], teamIndex: 1, playerIndex: 1 },
         ];
 
+        const fullSettings: GameSettings = {
+          ...settings,
+          nilValue: settings.nilValue ?? 100,
+          blindNilValue: settings.blindNilValue ?? 200,
+        };
+
         const game: Game = {
           id: uuidv4(),
           createdAt: new Date().toISOString(),
           teams,
           players,
-          settings,
+          settings: fullSettings,
           rounds: [],
           phase: 'bidding',
           currentRound: 1,
@@ -85,6 +96,25 @@ export const useGameStore = create<GameStore>()(
 
       abandonGame: () => {
         set({ currentGame: null });
+      },
+
+      rematch: () => {
+        const game = get().currentGame;
+        if (!game) return;
+        get().startGame(
+          [game.teams[0].name, game.teams[1].name],
+          [
+            [
+              game.players.find(p => p.teamIndex === 0 && p.playerIndex === 0)!.name,
+              game.players.find(p => p.teamIndex === 0 && p.playerIndex === 1)!.name,
+            ],
+            [
+              game.players.find(p => p.teamIndex === 1 && p.playerIndex === 0)!.name,
+              game.players.find(p => p.teamIndex === 1 && p.playerIndex === 1)!.name,
+            ],
+          ],
+          game.settings
+        );
       },
 
       submitBids: (bids) => {
@@ -178,13 +208,56 @@ export const useGameStore = create<GameStore>()(
             completedAt: new Date().toISOString(),
             winnerId,
           };
+
+          // Update player win/loss stats
+          const newPlayerStats = { ...get().playerStats };
+          finalGame.players.forEach(p => {
+            const key = p.name.toLowerCase().trim();
+            const existing = newPlayerStats[key] ?? { name: p.name, wins: 0, losses: 0, gamesPlayed: 0 };
+            const won = finalGame.teams[p.teamIndex].id === finalGame.winnerId;
+            newPlayerStats[key] = {
+              ...existing,
+              name: p.name,
+              wins: existing.wins + (won ? 1 : 0),
+              losses: existing.losses + (won ? 0 : 1),
+              gamesPlayed: existing.gamesPlayed + 1,
+            };
+          });
+
           set({
             currentGame: finalGame,
             completedGames: [finalGame, ...get().completedGames],
+            playerStats: newPlayerStats,
           });
         } else {
           set({ currentGame: updatedGame });
         }
+      },
+
+      undoLastRound: () => {
+        const game = get().currentGame;
+        if (!game) return;
+        const completedRounds = game.rounds.filter(r => r.isComplete);
+        if (completedRounds.length === 0) return;
+
+        const lastCompleted = completedRounds[completedRounds.length - 1];
+        // Remove current incomplete round (if any) and restore last completed as incomplete/tricks
+        const updatedRounds = game.rounds
+          .filter(r => r.roundNumber !== lastCompleted.roundNumber && r.isComplete)
+          .concat({
+            ...lastCompleted,
+            isComplete: false,
+            teamScores: [],
+          });
+
+        set({
+          currentGame: {
+            ...game,
+            rounds: updatedRounds,
+            currentRound: lastCompleted.roundNumber,
+            phase: 'tricks' as GamePhase,
+          },
+        });
       },
 
       startNextRound: () => {

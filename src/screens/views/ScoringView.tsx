@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditIcon from '@mui/icons-material/Edit';
+import UndoIcon from '@mui/icons-material/Undo';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useGameStore } from '../../store/gameStore';
@@ -21,10 +22,11 @@ import { formatScore } from '../../utils/scoring';
 import RenameDialog from '../../components/RenameDialog';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import { monoFont } from '../../theme';
+import { haptic } from '../../utils/haptic';
 
 export default function ScoringView() {
   const theme = useTheme();
-  const { currentGame, startNextRound } = useGameStore();
+  const { currentGame, startNextRound, undoLastRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
 
   if (!currentGame) return null;
@@ -40,6 +42,14 @@ export default function ScoringView() {
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6">Round {latestRound.roundNumber} · Results</Typography>
           </Box>
+          <Button
+            startIcon={<UndoIcon />}
+            size="small"
+            onClick={() => { haptic('medium'); undoLastRound(); }}
+            sx={{ fontSize: '0.75rem', mr: 0.5 }}
+          >
+            Undo
+          </Button>
           <Button
             startIcon={<EditIcon />}
             size="small"
@@ -202,7 +212,7 @@ export default function ScoringView() {
           variant="contained"
           size="large"
           fullWidth
-          onClick={startNextRound}
+          onClick={() => { haptic('confirm'); startNextRound(); }}
           endIcon={<ArrowForwardIcon />}
           sx={{ py: 1.5, fontSize: '1.05rem', minHeight: 56 }}
         >

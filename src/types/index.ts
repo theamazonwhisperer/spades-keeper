@@ -13,8 +13,17 @@ export interface Team {
 }
 
 export interface GameSettings {
-  winTarget: 300 | 500;
+  winTarget: 200 | 300 | 500;
   maxRounds: number | null; // null = unlimited
+  nilValue: 50 | 100;        // points per nil (default 100)
+  blindNilValue: 100 | 200;  // points per blind nil (default 200)
+}
+
+export interface PlayerStats {
+  name: string;
+  wins: number;
+  losses: number;
+  gamesPlayed: number;
 }
 
 export interface PlayerRoundData {

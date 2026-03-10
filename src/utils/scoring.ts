@@ -47,7 +47,10 @@ export function calculateRoundScores(
       teamTricks += tricks; // ALL tricks count toward team total
 
       if (pd.nilType !== 'none') {
-        const nilValue = pd.nilType === 'blind_nil' ? 200 : 100;
+        const nilValue =
+          pd.nilType === 'blind_nil'
+            ? (game.settings.blindNilValue ?? 200)
+            : (game.settings.nilValue ?? 100);
         const made = tricks === 0;
         nilBonuses.push({
           playerId: player.id,

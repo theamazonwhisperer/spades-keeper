@@ -24,6 +24,7 @@ import { getLatestTeamScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import RenameDialog from '../../components/RenameDialog';
 import { monoFont } from '../../theme';
+import { haptic } from '../../utils/haptic';
 
 interface BidState {
   nilType: NilType;
@@ -83,6 +84,7 @@ export default function BiddingView() {
   const totalBids = teamBid(0) + teamBid(1);
 
   const handleConfirm = () => {
+    haptic('confirm');
     submitBids(
       currentGame.players.map(p => ({
         playerId: p.id,
@@ -147,8 +149,12 @@ export default function BiddingView() {
                     >
                       {score}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {bags} bag{bags !== 1 ? 's' : ''}
+                    <Typography
+                      variant="body2"
+                      color={bags >= 7 ? 'warning.main' : 'text.secondary'}
+                      sx={{ fontWeight: bags >= 7 ? 700 : 400 }}
+                    >
+                      {bags >= 7 && '⚠ '}{bags} bag{bags !== 1 ? 's' : ''}
                     </Typography>
                   </>
                 )}
@@ -243,7 +249,7 @@ export default function BiddingView() {
                           }}
                         >
                           <IconButton
-                            onClick={() => updateBid(player.id, -1)}
+                            onClick={() => { haptic('light'); updateBid(player.id, -1); }}
                             disabled={state.amount <= 0}
                             sx={{
                               width: 48,
@@ -262,7 +268,7 @@ export default function BiddingView() {
                             {state.amount}
                           </Typography>
                           <IconButton
-                            onClick={() => updateBid(player.id, 1)}
+                            onClick={() => { haptic('light'); updateBid(player.id, 1); }}
                             disabled={state.amount >= 13}
                             sx={{
                               width: 48,
