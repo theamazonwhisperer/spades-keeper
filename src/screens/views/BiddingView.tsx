@@ -107,48 +107,11 @@ export default function BiddingView() {
               13 tricks in play
             </Typography>
           </Box>
-          <Chip
-            label={`${totalBids}/13`}
-            size="small"
-            color={totalBids === 13 ? 'success' : totalBids > 13 ? 'error' : 'default'}
-            sx={{ fontWeight: 700, fontFamily: monoFont, mr: 1 }}
-          />
           <IconButton onClick={() => setRenameOpen(true)} color="primary" sx={{ width: 48, height: 48 }}>
             <EditIcon fontSize="small" />
           </IconButton>
         </Toolbar>
       </AppBar>
-
-      {/* Running team scores */}
-      {completedRounds.length > 0 && (
-        <Box className="animate-fade-in" sx={{ display: 'flex', px: 1.5, pt: 1, gap: 1 }}>
-          {currentGame.teams.map(team => {
-            const { score, bags } = getLatestTeamScore(currentGame, team.id);
-            return (
-              <Box
-                key={team.id}
-                sx={{
-                  flex: 1,
-                  textAlign: 'center',
-                  py: 1,
-                  borderRadius: 2,
-                  bgcolor: alpha(theme.palette.primary.main, 0.07),
-                }}
-              >
-                <Typography variant="body1" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
-                  {team.name}
-                </Typography>
-                <Typography variant="h5" color="primary" sx={{ fontWeight: 900, lineHeight: 1.1, fontFamily: monoFont }}>
-                  {score}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {bags} bags
-                </Typography>
-              </Box>
-            );
-          })}
-        </Box>
-      )}
 
       {/* Bidding section */}
       <Box sx={{ display: 'flex', px: 1.5, pt: 1, gap: 1 }}>
@@ -156,29 +119,46 @@ export default function BiddingView() {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
           const tb = teamBid(teamIdx as 0 | 1);
           const isDouble = tb >= 10;
+          const { score, bags } = getLatestTeamScore(currentGame, team.id);
+          const hasHistory = completedRounds.length > 0;
 
           return (
             <Box key={team.id} sx={{ flex: 1 }}>
-              {/* Team header */}
+              {/* Merged team header */}
               <Box
                 sx={{
                   textAlign: 'center',
-                  py: 0.75,
+                  py: 1,
                   px: 1,
                   mb: 1,
                   borderRadius: 2,
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                 }}
               >
-                <Typography variant="h6" color="primary" sx={{ fontWeight: 800 }}>
+                <Typography variant="h6" color="primary" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
                   {team.name}
                 </Typography>
+                {hasHistory && (
+                  <>
+                    <Typography
+                      variant="h4"
+                      color="primary"
+                      sx={{ fontWeight: 900, lineHeight: 1.1, fontFamily: monoFont }}
+                    >
+                      {score}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {bags} bag{bags !== 1 ? 's' : ''}
+                    </Typography>
+                  </>
+                )}
                 <Typography
                   variant="body1"
                   sx={{
                     color: isDouble ? theme.palette.error.main : 'text.secondary',
-                    fontWeight: isDouble ? 700 : 400,
+                    fontWeight: isDouble ? 700 : 500,
                     fontFamily: monoFont,
+                    mt: hasHistory ? 0.5 : 0,
                   }}
                 >
                   Bid: {tb}{isDouble && ' ×2'}
@@ -213,23 +193,20 @@ export default function BiddingView() {
                         {player.name}
                       </Typography>
 
-                      {/* Nil type selector */}
+                      {/* Nil type selector — Nil / Blind only; neither = regular */}
                       <ToggleButtonGroup
-                        value={state.nilType}
+                        value={state.nilType === 'none' ? null : state.nilType}
                         exclusive
-                        onChange={(_, v) => v && updateNilType(player.id, v)}
+                        onChange={(_, v) => updateNilType(player.id, v ?? 'none')}
                         size="small"
                         fullWidth
                         sx={{ mb: 1.5 }}
                       >
-                        <ToggleButton value="none" sx={{ fontSize: '0.75rem', py: 0.75, minHeight: 40 }}>
-                          Reg
-                        </ToggleButton>
-                        <ToggleButton value="nil" sx={{ fontSize: '0.75rem', py: 0.75, minHeight: 40 }}>
+                        <ToggleButton value="nil" sx={{ fontSize: '0.8rem', py: 0.75, minHeight: 40, fontWeight: 600 }}>
                           Nil
                         </ToggleButton>
-                        <ToggleButton value="blind_nil" sx={{ fontSize: '0.75rem', py: 0.75, minHeight: 40 }}>
-                          Blind
+                        <ToggleButton value="blind_nil" sx={{ fontSize: '0.8rem', py: 0.75, minHeight: 40, fontWeight: 600 }}>
+                          Blind Nil
                         </ToggleButton>
                       </ToggleButtonGroup>
 
@@ -353,7 +330,7 @@ export default function BiddingView() {
           onClick={handleConfirm}
           sx={{ py: 1.5, fontSize: '1.05rem', fontWeight: 700, minHeight: 56 }}
         >
-          Confirm Bids
+          Confirm Bids · {totalBids}/13
         </Button>
       </Box>
 

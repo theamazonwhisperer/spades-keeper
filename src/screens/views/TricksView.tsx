@@ -92,37 +92,6 @@ export default function TricksView() {
         </Toolbar>
       </AppBar>
 
-      {/* Running team scores */}
-      {completedRounds.length > 0 && (
-        <Box className="animate-fade-in" sx={{ display: 'flex', px: 1.5, pt: 1, gap: 1 }}>
-          {currentGame.teams.map(team => {
-            const { score, bags } = getLatestTeamScore(currentGame, team.id);
-            return (
-              <Box
-                key={team.id}
-                sx={{
-                  flex: 1,
-                  textAlign: 'center',
-                  py: 1,
-                  borderRadius: 2,
-                  bgcolor: alpha(theme.palette.primary.main, 0.07),
-                }}
-              >
-                <Typography variant="body1" color="text.secondary" sx={{ display: 'block', fontWeight: 600 }}>
-                  {team.name}
-                </Typography>
-                <Typography variant="h5" color="primary" sx={{ fontWeight: 900, lineHeight: 1.1, fontFamily: monoFont }}>
-                  {score}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {bags} bags
-                </Typography>
-              </Box>
-            );
-          })}
-        </Box>
-      )}
-
       {/* Progress bar */}
       <Box sx={{ px: 1.5, pt: 1.5, pb: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -158,24 +127,43 @@ export default function TricksView() {
             .reduce((sum, d) => sum + d.bid, 0);
           const isDouble = teamBidVal >= 10;
           const teamMade = teamTricks >= teamBidVal;
+          const { score, bags } = getLatestTeamScore(currentGame, team.id);
+          const hasHistory = completedRounds.length > 0;
 
           return (
             <Box key={team.id} sx={{ flex: 1 }}>
-              {/* Team header */}
+              {/* Merged team header */}
               <Box
                 sx={{
                   textAlign: 'center',
-                  py: 0.75,
+                  py: 1,
                   px: 1,
                   mb: 1,
                   borderRadius: 2,
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                 }}
               >
-                <Typography variant="h6" color="primary" sx={{ fontWeight: 800 }}>
+                <Typography variant="h6" color="primary" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
                   {team.name}
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500, fontFamily: monoFont, fontSize: '0.9rem' }}>
+                {hasHistory && (
+                  <>
+                    <Typography
+                      variant="h4"
+                      color="primary"
+                      sx={{ fontWeight: 900, lineHeight: 1.1, fontFamily: monoFont }}
+                    >
+                      {score}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {bags} bag{bags !== 1 ? 's' : ''}
+                    </Typography>
+                  </>
+                )}
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: 500, fontFamily: monoFont, fontSize: '0.95rem', mt: hasHistory ? 0.5 : 0 }}
+                >
                   Bid{' '}
                   <strong style={{ color: isDouble ? theme.palette.error.main : undefined }}>
                     {teamBidVal}
