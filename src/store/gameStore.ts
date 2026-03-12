@@ -28,6 +28,7 @@ interface EditSnapshot {
 
 interface GameStore {
   currentGame: Game | null;
+  savedGames: Game[];        // paused/in-progress games
   completedGames: Game[];
   playerStats: Record<string, PlayerStats>;
   darkMode: boolean;
@@ -43,6 +44,9 @@ interface GameStore {
     settings: GameSettings
   ) => void;
   abandonGame: () => void;
+  saveAndNewGame: () => void;  // save current game, go to setup
+  resumeGame: (gameId: string) => void;
+  deleteSavedGame: (gameId: string) => void;
   rematch: () => void;
 
   // Round flow
@@ -70,6 +74,7 @@ export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
       currentGame: null,
+      savedGames: [],
       completedGames: [],
       playerStats: {},
       darkMode: true, // default to dark mode for card game feel
@@ -111,7 +116,42 @@ export const useGameStore = create<GameStore>()(
       },
 
       abandonGame: () => {
-        set({ currentGame: null });
+        set({ currentGame: null, editingRoundNumber: null, editSnapshot: null });
+      },
+
+      saveAndNewGame: () => {
+        const game = get().currentGame;
+        if (!game) return;
+        // Save current game to savedGames list
+        set({
+          savedGames: [game, ...get().savedGames.filter(g => g.id !== game.id)],
+          currentGame: null,
+          editingRoundNumber: null,
+          editSnapshot: null,
+        });
+      },
+
+      resumeGame: (gameId) => {
+        const current = get().currentGame;
+        const target = get().savedGames.find(g => g.id === gameId);
+        if (!target) return;
+
+        // If there's an active game, save it first
+        let updatedSaved = get().savedGames.filter(g => g.id !== gameId);
+        if (current) {
+          updatedSaved = [current, ...updatedSaved.filter(g => g.id !== current.id)];
+        }
+
+        set({
+          currentGame: target,
+          savedGames: updatedSaved,
+          editingRoundNumber: null,
+          editSnapshot: null,
+        });
+      },
+
+      deleteSavedGame: (gameId) => {
+        set({ savedGames: get().savedGames.filter(g => g.id !== gameId) });
       },
 
       rematch: () => {
