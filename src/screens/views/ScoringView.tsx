@@ -186,8 +186,11 @@ export default function ScoringView() {
         </Box>
 
         {/* Score history */}
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.25 }}>
           Round History
+        </Typography>
+        <Typography variant="caption" color="text.disabled" sx={{ mb: 1, display: 'block' }}>
+          Tap a round to edit it
         </Typography>
         <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
       </Box>

@@ -8,7 +8,6 @@ import {
   Box,
   useTheme,
   alpha,
-  IconButton,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { Game } from '../types';
@@ -100,24 +99,26 @@ export default function ScoreHistoryTable({ game, onEditRound }: Props) {
             return (
               <TableRow
                 key={round.roundNumber}
+                onClick={onEditRound ? () => onEditRound(round.roundNumber) : undefined}
                 sx={{
                   '&:nth-of-type(even)': {
                     bgcolor: alpha(theme.palette.primary.main, 0.03),
                   },
+                  ...(onEditRound && {
+                    cursor: 'pointer',
+                    '&:active': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.12),
+                    },
+                  }),
                 }}
               >
-                <TableCell sx={{ ...cellSx, fontWeight: 600, color: 'text.secondary', p: onEditRound ? 0 : undefined }}>
-                  {onEditRound ? (
-                    <IconButton
-                      size="small"
-                      onClick={() => onEditRound(round.roundNumber)}
-                      sx={{ fontSize: '0.75rem', fontFamily: monoFont, fontWeight: 600, width: 28, height: 28 }}
-                    >
-                      {round.roundNumber}
-                    </IconButton>
-                  ) : (
-                    round.roundNumber
-                  )}
+                <TableCell sx={{ ...cellSx, fontWeight: 600, color: 'text.secondary' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {round.roundNumber}
+                    {onEditRound && (
+                      <EditIcon sx={{ fontSize: '0.7rem', color: 'text.disabled' }} />
+                    )}
+                  </Box>
                 </TableCell>
                 {/* Team 0 */}
                 <TableCell sx={cellSx} align="center">
