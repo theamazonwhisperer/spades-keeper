@@ -31,6 +31,14 @@ export default function InstallPrompt() {
       }
     }
 
+    // Pick up event if it fired before React mounted
+    const globalPrompt = (window as Window & { __pwa_deferred_prompt?: BeforeInstallPromptEvent }).__pwa_deferred_prompt;
+    if (globalPrompt) {
+      setDeferredPrompt(globalPrompt);
+      (window as Window & { __pwa_deferred_prompt?: BeforeInstallPromptEvent }).__pwa_deferred_prompt = undefined;
+      return;
+    }
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
