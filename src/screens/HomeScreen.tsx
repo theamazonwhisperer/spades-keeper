@@ -167,7 +167,7 @@ export default function HomeScreen() {
           >
             Active Game
           </Typography>
-          <GameCard game={currentGame} onClick={() => navigate('/game')} theme={theme} active />
+          <GameCard game={currentGame} onClick={() => navigate('/game')} active />
         </Box>
       )}
 
@@ -187,7 +187,6 @@ export default function HomeScreen() {
                 <GameCard
                   game={game}
                   onClick={() => handleResumeGame(game.id)}
-                  theme={theme}
                 />
                 <IconButton
                   onClick={(e) => { e.stopPropagation(); deleteSavedGame(game.id); }}
@@ -328,7 +327,8 @@ export default function HomeScreen() {
   );
 }
 
-function GameCard({ game, onClick, theme, active }: { game: Game; onClick: () => void; theme: ReturnType<typeof useTheme>; active?: boolean }) {
+function GameCard({ game, onClick, active }: { game: Game; onClick: () => void; active?: boolean }) {
+  const theme = useTheme();
   return (
     <Card
       className={active ? 'animate-pulse-glow' : undefined}
