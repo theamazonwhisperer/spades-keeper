@@ -19,6 +19,8 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import EditIcon from '@mui/icons-material/Edit';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import HomeIcon from '@mui/icons-material/Home';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
@@ -34,6 +36,7 @@ interface BidState {
 
 export default function BiddingView() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { currentGame, submitBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
 
@@ -135,6 +138,11 @@ export default function BiddingView() {
       {/* Header */}
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar sx={{ minHeight: 56 }}>
+          {!editingRoundNumber && (
+            <IconButton onClick={() => navigate('/')} color="inherit" sx={{ width: 40, height: 40, mr: 0.5 }}>
+              <HomeIcon fontSize="small" />
+            </IconButton>
+          )}
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
               Round {currentGame.currentRound} · Place Bids

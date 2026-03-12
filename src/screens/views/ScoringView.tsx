@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardContent,
+  IconButton,
   AppBar,
   Toolbar,
   Chip,
@@ -17,6 +18,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import UndoIcon from '@mui/icons-material/Undo';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import HomeIcon from '@mui/icons-material/Home';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { formatScore } from '../../utils/scoring';
 import RenameDialog from '../../components/RenameDialog';
@@ -26,6 +29,7 @@ import { haptic } from '../../utils/haptic';
 
 export default function ScoringView() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { currentGame, startNextRound, undoLastRound, editRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
 
@@ -39,6 +43,9 @@ export default function ScoringView() {
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 12 }}>
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
+          <IconButton onClick={() => navigate('/')} color="inherit" sx={{ width: 40, height: 40, mr: 0.5 }}>
+            <HomeIcon fontSize="small" />
+          </IconButton>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6">Round {latestRound.roundNumber} · Results</Typography>
           </Box>
