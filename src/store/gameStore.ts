@@ -19,11 +19,22 @@ interface BidInput {
   bid: number;
 }
 
+// Snapshot of game state before editing, so we can cancel cleanly
+interface EditSnapshot {
+  rounds: Round[];
+  currentRound: number;
+  phase: GamePhase;
+}
+
 interface GameStore {
   currentGame: Game | null;
   completedGames: Game[];
   playerStats: Record<string, PlayerStats>;
   darkMode: boolean;
+
+  // Editing state
+  editingRoundNumber: number | null;
+  editSnapshot: EditSnapshot | null;
 
   // Game lifecycle
   startGame: (
@@ -41,6 +52,7 @@ interface GameStore {
   undoLastRound: () => void;
   startNextRound: () => void;
   editRound: (roundNumber: number) => void;
+  cancelEditRound: () => void;
 
   // Renaming (allowed any time during active game)
   renamePlayer: (playerId: string, newName: string) => void;
@@ -61,6 +73,8 @@ export const useGameStore = create<GameStore>()(
       completedGames: [],
       playerStats: {},
       darkMode: true, // default to dark mode for card game feel
+      editingRoundNumber: null,
+      editSnapshot: null,
 
       startGame: (teamNames, playerNames, settings) => {
         const teams = [
@@ -244,9 +258,11 @@ export const useGameStore = create<GameStore>()(
             currentGame: finalGame,
             completedGames: [finalGame, ...get().completedGames],
             playerStats: newPlayerStats,
+            editingRoundNumber: null,
+            editSnapshot: null,
           });
         } else {
-          set({ currentGame: updatedGame });
+          set({ currentGame: updatedGame, editingRoundNumber: null, editSnapshot: null });
         }
       },
 
@@ -283,6 +299,13 @@ export const useGameStore = create<GameStore>()(
         const targetRound = game.rounds.find(r => r.roundNumber === roundNumber && r.isComplete);
         if (!targetRound) return;
 
+        // Save snapshot so we can cancel and restore
+        const snapshot: EditSnapshot = {
+          rounds: game.rounds,
+          currentRound: game.currentRound,
+          phase: game.phase,
+        };
+
         // Mark the target round as incomplete so it can be re-edited
         const updatedRounds = game.rounds
           .filter(r => r.isComplete || r.roundNumber === roundNumber)
@@ -293,11 +316,31 @@ export const useGameStore = create<GameStore>()(
           );
 
         set({
+          editingRoundNumber: roundNumber,
+          editSnapshot: snapshot,
           currentGame: {
             ...game,
             rounds: updatedRounds,
             currentRound: roundNumber,
             phase: 'bidding' as GamePhase,
+          },
+        });
+      },
+
+      cancelEditRound: () => {
+        const game = get().currentGame;
+        const snapshot = get().editSnapshot;
+        if (!game || !snapshot) return;
+
+        // Restore the game to its pre-edit state
+        set({
+          editingRoundNumber: null,
+          editSnapshot: null,
+          currentGame: {
+            ...game,
+            rounds: snapshot.rounds,
+            currentRound: snapshot.currentRound,
+            phase: snapshot.phase,
           },
         });
       },

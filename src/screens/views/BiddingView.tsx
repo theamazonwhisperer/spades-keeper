@@ -18,6 +18,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import EditIcon from '@mui/icons-material/Edit';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
@@ -33,7 +34,7 @@ interface BidState {
 
 export default function BiddingView() {
   const theme = useTheme();
-  const { currentGame, submitBids, editRound } = useGameStore();
+  const { currentGame, submitBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
 
   // Initialize from existing round data if we came back via Fix Bids
@@ -98,6 +99,39 @@ export default function BiddingView() {
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 12 }}>
+      {/* Editing banner */}
+      {editingRoundNumber && (
+        <Box
+          sx={{
+            bgcolor: alpha(theme.palette.warning.main, 0.15),
+            borderBottom: `2px solid ${alpha(theme.palette.warning.main, 0.4)}`,
+            px: 2,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <IconButton
+            onClick={cancelEditRound}
+            size="small"
+            sx={{ color: theme.palette.warning.main }}
+          >
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="body2" sx={{ fontWeight: 700, color: theme.palette.warning.main, flex: 1 }}>
+            Editing Round {editingRoundNumber}
+          </Typography>
+          <Button
+            size="small"
+            onClick={cancelEditRound}
+            sx={{ color: theme.palette.warning.main, fontWeight: 600, fontSize: '0.75rem' }}
+          >
+            Cancel
+          </Button>
+        </Box>
+      )}
+
       {/* Header */}
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar sx={{ minHeight: 56 }}>
@@ -109,9 +143,11 @@ export default function BiddingView() {
               13 tricks in play
             </Typography>
           </Box>
-          <IconButton onClick={() => setRenameOpen(true)} color="primary" sx={{ width: 48, height: 48 }}>
-            <EditIcon fontSize="small" />
-          </IconButton>
+          {!editingRoundNumber && (
+            <IconButton onClick={() => setRenameOpen(true)} color="primary" sx={{ width: 48, height: 48 }}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -309,7 +345,7 @@ export default function BiddingView() {
           >
             Round History
           </Typography>
-          <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
+          <ScoreHistoryTable game={currentGame} onEditRound={editingRoundNumber ? undefined : editRound} />
         </Box>
       )}
 

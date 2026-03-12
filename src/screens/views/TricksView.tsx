@@ -17,6 +17,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import EditIcon from '@mui/icons-material/Edit';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
@@ -32,12 +33,13 @@ const nilLabel: Record<NilType, string | null> = {
 
 export default function TricksView() {
   const theme = useTheme();
-  const { currentGame, submitTricks, editBids, editRound } = useGameStore();
+  const { currentGame, submitTricks, editBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
 
   // useState must come before any early return (Rules of Hooks)
   const [tricks, setTricks] = useState<Record<string, number>>(() => {
     if (!currentGame) return {};
-    const existingRound = currentGame.rounds[currentGame.rounds.length - 1];
+    const existingRound = currentGame.rounds.find(r => !r.isComplete)
+      ?? currentGame.rounds[currentGame.rounds.length - 1];
     const initial: Record<string, number> = {};
     currentGame.players.forEach(p => {
       const existing = existingRound?.playerData.find(d => d.playerId === p.id)?.tricksTaken;
@@ -48,7 +50,8 @@ export default function TricksView() {
 
   if (!currentGame) return null;
 
-  const currentRound = currentGame.rounds[currentGame.rounds.length - 1];
+  const currentRound = currentGame.rounds.find(r => !r.isComplete)
+    ?? currentGame.rounds[currentGame.rounds.length - 1];
   if (!currentRound) return null;
 
   const getPlayerBid = (playerId: string) =>
@@ -76,6 +79,39 @@ export default function TricksView() {
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 12 }}>
+      {/* Editing banner */}
+      {editingRoundNumber && (
+        <Box
+          sx={{
+            bgcolor: alpha(theme.palette.warning.main, 0.15),
+            borderBottom: `2px solid ${alpha(theme.palette.warning.main, 0.4)}`,
+            px: 2,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <IconButton
+            onClick={cancelEditRound}
+            size="small"
+            sx={{ color: theme.palette.warning.main }}
+          >
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="body2" sx={{ fontWeight: 700, color: theme.palette.warning.main, flex: 1 }}>
+            Editing Round {editingRoundNumber}
+          </Typography>
+          <Button
+            size="small"
+            onClick={cancelEditRound}
+            sx={{ color: theme.palette.warning.main, fontWeight: 600, fontSize: '0.75rem' }}
+          >
+            Cancel
+          </Button>
+        </Box>
+      )}
+
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar sx={{ minHeight: 56 }}>
           <Box sx={{ flex: 1 }}>
@@ -336,7 +372,7 @@ export default function TricksView() {
           >
             Round History
           </Typography>
-          <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
+          <ScoreHistoryTable game={currentGame} onEditRound={editingRoundNumber ? undefined : editRound} />
         </Box>
       )}
 
