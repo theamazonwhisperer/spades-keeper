@@ -22,8 +22,10 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import ScienceIcon from '@mui/icons-material/Science';
 import { useGameStore } from '../store/gameStore';
 import { getLatestTeamScore } from '../utils/scoring';
+import { loadDemoGame } from '../utils/demoData';
 import { monoFont } from '../theme';
 
 export default function HomeScreen() {
@@ -78,7 +80,19 @@ export default function HomeScreen() {
           pb: 2,
         }}
       >
-        <Box />
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          {!currentGame && (
+            <Tooltip title="Load Demo Game">
+              <IconButton
+                onClick={() => { loadDemoGame(); navigate('/game'); }}
+                color="primary"
+                sx={{ width: 48, height: 48 }}
+              >
+                <ScienceIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           <Tooltip title="Game History">
             <IconButton
