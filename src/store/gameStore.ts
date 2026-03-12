@@ -307,8 +307,10 @@ export const useGameStore = create<GameStore>()(
         };
 
         // Mark the target round as incomplete so it can be re-edited
+        // Remove any existing incomplete round (current new round in progress)
+        // but keep all completed rounds intact
         const updatedRounds = game.rounds
-          .filter(r => r.isComplete || r.roundNumber === roundNumber)
+          .filter(r => r.isComplete)
           .map(r =>
             r.roundNumber === roundNumber
               ? { ...r, isComplete: false, teamScores: [] }
