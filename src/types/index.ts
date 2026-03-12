@@ -17,6 +17,7 @@ export interface GameSettings {
   maxRounds: number | null; // null = unlimited
   nilValue: 50 | 100;        // points per nil (default 100)
   blindNilValue: 100 | 200;  // points per blind nil (default 200)
+  doubleOn10: boolean;        // true = bids of 10+ score double points
 }
 
 export interface PlayerStats {

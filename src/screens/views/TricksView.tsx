@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import BuildIcon from '@mui/icons-material/Build';
+import EditIcon from '@mui/icons-material/Edit';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
@@ -32,7 +32,7 @@ const nilLabel: Record<NilType, string | null> = {
 
 export default function TricksView() {
   const theme = useTheme();
-  const { currentGame, submitTricks, fixBids } = useGameStore();
+  const { currentGame, submitTricks, editBids, editRound } = useGameStore();
 
   // useState must come before any early return (Rules of Hooks)
   const [tricks, setTricks] = useState<Record<string, number>>(() => {
@@ -87,13 +87,13 @@ export default function TricksView() {
             </Typography>
           </Box>
           <Button
-            startIcon={<BuildIcon />}
+            startIcon={<EditIcon />}
             size="small"
             variant="outlined"
-            onClick={fixBids}
+            onClick={editBids}
             sx={{ fontSize: '0.75rem', mr: 0.5 }}
           >
-            Fix Bids
+            Edit Bids
           </Button>
         </Toolbar>
       </AppBar>
@@ -131,7 +131,7 @@ export default function TricksView() {
               return player?.teamIndex === teamIdx && d.nilType === 'none';
             })
             .reduce((sum, d) => sum + d.bid, 0);
-          const isDouble = teamBidVal >= 10;
+          const isDouble = (currentGame.settings.doubleOn10 ?? true) && teamBidVal >= 10;
           const teamMade = teamTricks >= teamBidVal;
           const { score, bags } = getLatestTeamScore(currentGame, team.id);
           const hasHistory = completedRounds.length > 0;
@@ -336,7 +336,7 @@ export default function TricksView() {
           >
             Round History
           </Typography>
-          <ScoreHistoryTable game={currentGame} />
+          <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
         </Box>
       )}
 

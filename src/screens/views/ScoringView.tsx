@@ -26,7 +26,7 @@ import { haptic } from '../../utils/haptic';
 
 export default function ScoringView() {
   const theme = useTheme();
-  const { currentGame, startNextRound, undoLastRound } = useGameStore();
+  const { currentGame, startNextRound, undoLastRound, editRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
 
   if (!currentGame) return null;
@@ -189,7 +189,7 @@ export default function ScoringView() {
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           Round History
         </Typography>
-        <ScoreHistoryTable game={currentGame} />
+        <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
       </Box>
 
       {/* Sticky Next Round */}

@@ -8,16 +8,19 @@ import {
   Box,
   useTheme,
   alpha,
+  IconButton,
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import { Game } from '../types';
 import { formatScore } from '../utils/scoring';
 import { monoFont } from '../theme';
 
 interface Props {
   game: Game;
+  onEditRound?: (roundNumber: number) => void;
 }
 
-export default function ScoreHistoryTable({ game }: Props) {
+export default function ScoreHistoryTable({ game, onEditRound }: Props) {
   const theme = useTheme();
   const completedRounds = game.rounds.filter(r => r.isComplete);
 
@@ -103,8 +106,18 @@ export default function ScoreHistoryTable({ game }: Props) {
                   },
                 }}
               >
-                <TableCell sx={{ ...cellSx, fontWeight: 600, color: 'text.secondary' }}>
-                  {round.roundNumber}
+                <TableCell sx={{ ...cellSx, fontWeight: 600, color: 'text.secondary', p: onEditRound ? 0 : undefined }}>
+                  {onEditRound ? (
+                    <IconButton
+                      size="small"
+                      onClick={() => onEditRound(round.roundNumber)}
+                      sx={{ fontSize: '0.75rem', fontFamily: monoFont, fontWeight: 600, width: 28, height: 28 }}
+                    >
+                      {round.roundNumber}
+                    </IconButton>
+                  ) : (
+                    round.roundNumber
+                  )}
                 </TableCell>
                 {/* Team 0 */}
                 <TableCell sx={cellSx} align="center">

@@ -36,10 +36,11 @@ interface GameStore {
 
   // Round flow
   submitBids: (bids: BidInput[]) => void;
-  fixBids: () => void;
+  editBids: () => void;
   submitTricks: (tricks: { playerId: string; tricksTaken: number }[]) => void;
   undoLastRound: () => void;
   startNextRound: () => void;
+  editRound: (roundNumber: number) => void;
 
   // Renaming (allowed any time during active game)
   renamePlayer: (playerId: string, newName: string) => void;
@@ -78,6 +79,7 @@ export const useGameStore = create<GameStore>()(
           ...settings,
           nilValue: settings.nilValue ?? 100,
           blindNilValue: settings.blindNilValue ?? 200,
+          doubleOn10: settings.doubleOn10 ?? true,
         };
 
         const game: Game = {
@@ -156,7 +158,7 @@ export const useGameStore = create<GameStore>()(
         });
       },
 
-      fixBids: () => {
+      editBids: () => {
         const game = get().currentGame;
         if (!game || game.phase !== 'tricks') return;
 
@@ -173,29 +175,43 @@ export const useGameStore = create<GameStore>()(
         const game = get().currentGame;
         if (!game) return;
 
-        const currentRoundIdx = game.rounds.length - 1;
-        const currentRound = game.rounds[currentRoundIdx];
+        // Find the incomplete round being edited
+        const editingIdx = game.rounds.findIndex(r => !r.isComplete);
+        if (editingIdx < 0) return;
+        const editingRound = game.rounds[editingIdx];
 
-        const updatedPlayerData: PlayerRoundData[] = currentRound.playerData.map(pd => ({
+        const updatedPlayerData: PlayerRoundData[] = editingRound.playerData.map(pd => ({
           ...pd,
           tricksTaken: tricks.find(t => t.playerId === pd.playerId)?.tricksTaken ?? 0,
         }));
 
-        const teamScores = calculateRoundScores(game, updatedPlayerData);
-
-        const completedRound: Round = {
-          ...currentRound,
+        // Build rounds list with the edited round completed
+        const updatedRounds = [...game.rounds];
+        updatedRounds[editingIdx] = {
+          ...editingRound,
           playerData: updatedPlayerData,
-          teamScores,
+          teamScores: [], // will be recalculated below
           isComplete: true,
         };
 
-        const updatedRounds = [...game.rounds];
-        updatedRounds[currentRoundIdx] = completedRound;
+        // Recalculate scores for the edited round and all subsequent rounds
+        // (cumulative bags/scores cascade forward)
+        for (let i = editingIdx; i < updatedRounds.length; i++) {
+          if (!updatedRounds[i].isComplete) continue;
+          const gameForCalc: Game = {
+            ...game,
+            rounds: updatedRounds.slice(0, i).concat({ ...updatedRounds[i], isComplete: false }),
+          };
+          const teamScores = calculateRoundScores(gameForCalc, updatedRounds[i].playerData);
+          updatedRounds[i] = { ...updatedRounds[i], teamScores };
+        }
 
+        // Determine which round to show in scoring view and what the next round should be
+        const lastCompletedRound = updatedRounds.filter(r => r.isComplete).length;
         const updatedGame: Game = {
           ...game,
           rounds: updatedRounds,
+          currentRound: lastCompletedRound + 1,
           phase: 'scoring' as GamePhase,
         };
 
@@ -256,6 +272,32 @@ export const useGameStore = create<GameStore>()(
             rounds: updatedRounds,
             currentRound: lastCompleted.roundNumber,
             phase: 'tricks' as GamePhase,
+          },
+        });
+      },
+
+      editRound: (roundNumber) => {
+        const game = get().currentGame;
+        if (!game) return;
+
+        const targetRound = game.rounds.find(r => r.roundNumber === roundNumber && r.isComplete);
+        if (!targetRound) return;
+
+        // Mark the target round as incomplete so it can be re-edited
+        const updatedRounds = game.rounds
+          .filter(r => r.isComplete || r.roundNumber === roundNumber)
+          .map(r =>
+            r.roundNumber === roundNumber
+              ? { ...r, isComplete: false, teamScores: [] }
+              : r
+          );
+
+        set({
+          currentGame: {
+            ...game,
+            rounds: updatedRounds,
+            currentRound: roundNumber,
+            phase: 'bidding' as GamePhase,
           },
         });
       },

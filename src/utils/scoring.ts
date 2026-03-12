@@ -65,7 +65,8 @@ export function calculateRoundScores(
       }
     }
 
-    const isDouble = teamBid >= 10;
+    const doubleOn10 = game.settings.doubleOn10 ?? true;
+    const isDouble = doubleOn10 && teamBid >= 10;
     const multiplier = isDouble ? 2 : 1;
 
     let contractScore: number;

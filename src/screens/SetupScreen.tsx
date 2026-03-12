@@ -36,6 +36,7 @@ export default function SetupScreen() {
   const [maxRounds, setMaxRounds] = useState<'10' | 'unlimited'>('unlimited');
   const [nilValue, setNilValue] = useState<50 | 100>(100);
   const [blindNilValue, setBlindNilValue] = useState<100 | 200>(200);
+  const [doubleOn10, setDoubleOn10] = useState(true);
 
   const canStart =
     teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim();
@@ -47,6 +48,7 @@ export default function SetupScreen() {
       maxRounds: maxRounds === '10' ? 10 : null,
       nilValue,
       blindNilValue,
+      doubleOn10,
     };
     startGame(
       [teamName1.trim(), teamName2.trim()],
@@ -244,7 +246,7 @@ export default function SetupScreen() {
           </ToggleButtonGroup>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 2.5 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
             Blind Nil Value
           </Typography>
@@ -257,6 +259,22 @@ export default function SetupScreen() {
           >
             <ToggleButton value={100}>±100 pts</ToggleButton>
             <ToggleButton value={200}>±200 pts</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
+            10+ Bid Bonus
+          </Typography>
+          <ToggleButtonGroup
+            value={doubleOn10}
+            exclusive
+            onChange={(_, v) => v !== null && setDoubleOn10(v)}
+            fullWidth
+            size="medium"
+          >
+            <ToggleButton value={true}>Double Points</ToggleButton>
+            <ToggleButton value={false}>Normal Points</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 

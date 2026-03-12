@@ -33,7 +33,7 @@ interface BidState {
 
 export default function BiddingView() {
   const theme = useTheme();
-  const { currentGame, submitBids } = useGameStore();
+  const { currentGame, submitBids, editRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
 
   // Initialize from existing round data if we came back via Fix Bids
@@ -120,7 +120,7 @@ export default function BiddingView() {
         {currentGame.teams.map((team, teamIdx) => {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
           const tb = teamBid(teamIdx as 0 | 1);
-          const isDouble = tb >= 10;
+          const isDouble = (currentGame.settings.doubleOn10 ?? true) && tb >= 10;
           const { score, bags } = getLatestTeamScore(currentGame, team.id);
           const hasHistory = completedRounds.length > 0;
 
@@ -309,7 +309,7 @@ export default function BiddingView() {
           >
             Round History
           </Typography>
-          <ScoreHistoryTable game={currentGame} />
+          <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
         </Box>
       )}
 
