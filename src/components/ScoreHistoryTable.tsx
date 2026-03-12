@@ -9,15 +9,17 @@ import {
   useTheme,
   alpha,
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import { Game } from '../types';
 import { formatScore } from '../utils/scoring';
 import { monoFont } from '../theme';
 
 interface Props {
   game: Game;
+  onEditRound?: (roundNumber: number) => void;
 }
 
-export default function ScoreHistoryTable({ game }: Props) {
+export default function ScoreHistoryTable({ game, onEditRound }: Props) {
   const theme = useTheme();
   const completedRounds = game.rounds.filter(r => r.isComplete);
 
@@ -97,14 +99,26 @@ export default function ScoreHistoryTable({ game }: Props) {
             return (
               <TableRow
                 key={round.roundNumber}
+                onClick={onEditRound ? () => onEditRound(round.roundNumber) : undefined}
                 sx={{
                   '&:nth-of-type(even)': {
                     bgcolor: alpha(theme.palette.primary.main, 0.03),
                   },
+                  ...(onEditRound && {
+                    cursor: 'pointer',
+                    '&:active': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.12),
+                    },
+                  }),
                 }}
               >
                 <TableCell sx={{ ...cellSx, fontWeight: 600, color: 'text.secondary' }}>
-                  {round.roundNumber}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {round.roundNumber}
+                    {onEditRound && (
+                      <EditIcon sx={{ fontSize: '0.7rem', color: 'text.disabled' }} />
+                    )}
+                  </Box>
                 </TableCell>
                 {/* Team 0 */}
                 <TableCell sx={cellSx} align="center">

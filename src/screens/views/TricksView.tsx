@@ -16,7 +16,10 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import BuildIcon from '@mui/icons-material/Build';
+import EditIcon from '@mui/icons-material/Edit';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import HomeIcon from '@mui/icons-material/Home';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
@@ -32,12 +35,14 @@ const nilLabel: Record<NilType, string | null> = {
 
 export default function TricksView() {
   const theme = useTheme();
-  const { currentGame, submitTricks, fixBids } = useGameStore();
+  const navigate = useNavigate();
+  const { currentGame, submitTricks, editBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
 
   // useState must come before any early return (Rules of Hooks)
   const [tricks, setTricks] = useState<Record<string, number>>(() => {
     if (!currentGame) return {};
-    const existingRound = currentGame.rounds[currentGame.rounds.length - 1];
+    const existingRound = currentGame.rounds.find(r => !r.isComplete)
+      ?? currentGame.rounds[currentGame.rounds.length - 1];
     const initial: Record<string, number> = {};
     currentGame.players.forEach(p => {
       const existing = existingRound?.playerData.find(d => d.playerId === p.id)?.tricksTaken;
@@ -48,7 +53,8 @@ export default function TricksView() {
 
   if (!currentGame) return null;
 
-  const currentRound = currentGame.rounds[currentGame.rounds.length - 1];
+  const currentRound = currentGame.rounds.find(r => !r.isComplete)
+    ?? currentGame.rounds[currentGame.rounds.length - 1];
   if (!currentRound) return null;
 
   const getPlayerBid = (playerId: string) =>
@@ -76,8 +82,46 @@ export default function TricksView() {
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 12 }}>
+      {/* Editing banner */}
+      {editingRoundNumber && (
+        <Box
+          sx={{
+            bgcolor: alpha(theme.palette.warning.main, 0.15),
+            borderBottom: `2px solid ${alpha(theme.palette.warning.main, 0.4)}`,
+            px: 2,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <IconButton
+            onClick={cancelEditRound}
+            size="small"
+            sx={{ color: theme.palette.warning.main }}
+          >
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="body2" sx={{ fontWeight: 700, color: theme.palette.warning.main, flex: 1 }}>
+            Editing Round {editingRoundNumber}
+          </Typography>
+          <Button
+            size="small"
+            onClick={cancelEditRound}
+            sx={{ color: theme.palette.warning.main, fontWeight: 600, fontSize: '0.75rem' }}
+          >
+            Cancel
+          </Button>
+        </Box>
+      )}
+
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar sx={{ minHeight: 56 }}>
+          {!editingRoundNumber && (
+            <IconButton onClick={() => navigate('/')} color="inherit" sx={{ width: 40, height: 40, mr: 0.5 }}>
+              <HomeIcon fontSize="small" />
+            </IconButton>
+          )}
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
               Round {currentGame.currentRound} · Enter Tricks
@@ -87,13 +131,13 @@ export default function TricksView() {
             </Typography>
           </Box>
           <Button
-            startIcon={<BuildIcon />}
+            startIcon={<EditIcon />}
             size="small"
             variant="outlined"
-            onClick={fixBids}
+            onClick={editBids}
             sx={{ fontSize: '0.75rem', mr: 0.5 }}
           >
-            Fix Bids
+            Edit Bids
           </Button>
         </Toolbar>
       </AppBar>
@@ -131,7 +175,7 @@ export default function TricksView() {
               return player?.teamIndex === teamIdx && d.nilType === 'none';
             })
             .reduce((sum, d) => sum + d.bid, 0);
-          const isDouble = teamBidVal >= 10;
+          const isDouble = (currentGame.settings.doubleOn10 ?? true) && teamBidVal >= 10;
           const teamMade = teamTricks >= teamBidVal;
           const { score, bags } = getLatestTeamScore(currentGame, team.id);
           const hasHistory = completedRounds.length > 0;
@@ -336,7 +380,7 @@ export default function TricksView() {
           >
             Round History
           </Typography>
-          <ScoreHistoryTable game={currentGame} />
+          <ScoreHistoryTable game={currentGame} onEditRound={editingRoundNumber ? undefined : editRound} />
         </Box>
       )}
 

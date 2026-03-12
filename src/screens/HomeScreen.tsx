@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -8,10 +7,6 @@ import {
   CardContent,
   CardActionArea,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Tooltip,
   useTheme,
   alpha,
@@ -22,16 +17,23 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import ScienceIcon from '@mui/icons-material/Science';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useGameStore } from '../store/gameStore';
 import { getLatestTeamScore } from '../utils/scoring';
+import { loadDemoGame } from '../utils/demoData';
 import { monoFont } from '../theme';
+import { Game } from '../types';
 
 export default function HomeScreen() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { currentGame, completedGames, playerStats, abandonGame, toggleDarkMode, darkMode } =
-    useGameStore();
-  const [abandonDialog, setAbandonDialog] = useState(false);
+  const {
+    currentGame, savedGames, completedGames, playerStats,
+    abandonGame, saveAndNewGame, resumeGame, deleteSavedGame,
+    toggleDarkMode, darkMode,
+  } = useGameStore();
 
   const topPlayers = Object.values(playerStats)
     .filter(s => s.gamesPlayed >= 1)
@@ -40,16 +42,15 @@ export default function HomeScreen() {
 
   const handleNewGame = () => {
     if (currentGame) {
-      setAbandonDialog(true);
-    } else {
-      navigate('/setup');
+      // Save current game and go to setup
+      saveAndNewGame();
     }
+    navigate('/setup');
   };
 
-  const confirmAbandon = () => {
-    abandonGame();
-    setAbandonDialog(false);
-    navigate('/setup');
+  const handleResumeGame = (gameId: string) => {
+    resumeGame(gameId);
+    navigate('/game');
   };
 
   const recentGames = completedGames.slice(0, 5);
@@ -78,7 +79,19 @@ export default function HomeScreen() {
           pb: 2,
         }}
       >
-        <Box />
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          {!currentGame && (
+            <Tooltip title="Load Demo Game">
+              <IconButton
+                onClick={() => { loadDemoGame(); navigate('/game'); }}
+                color="primary"
+                sx={{ width: 48, height: 48 }}
+              >
+                <ScienceIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           <Tooltip title="Game History">
             <IconButton
@@ -152,37 +165,45 @@ export default function HomeScreen() {
             color="text.secondary"
             sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
           >
-            Game in Progress
+            Active Game
           </Typography>
-          <Card
-            className="animate-pulse-glow"
-            sx={{
-              border: `2px solid ${alpha(theme.palette.primary.main, 0.5)}`,
-              bgcolor: alpha(theme.palette.primary.main, 0.05),
-            }}
+          <GameCard game={currentGame} onClick={() => navigate('/game')} active />
+        </Box>
+      )}
+
+      {/* Saved Games */}
+      {savedGames.length > 0 && (
+        <Box className="animate-slide-up" sx={{ mb: 3, animationDelay: '175ms' }}>
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
           >
-            <CardActionArea onClick={() => navigate('/game')} sx={{ p: 2, minHeight: 64 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                    Round {currentGame.currentRound}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
-                    {currentGame.teams.map(t => {
-                      const { score } = getLatestTeamScore(currentGame, t.id);
-                      return (
-                        <Typography key={t.id} variant="body2" color="text.secondary">
-                          <strong style={{ color: theme.palette.primary.main }}>{t.name}</strong>{' '}
-                          <span style={{ fontFamily: monoFont }}>{score}</span>
-                        </Typography>
-                      );
-                    })}
-                  </Box>
-                </Box>
-                <PlayArrowIcon color="primary" sx={{ fontSize: 28 }} />
+            Saved Games
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {savedGames.map(game => (
+              <Box key={game.id} sx={{ position: 'relative' }}>
+                <GameCard
+                  game={game}
+                  onClick={() => handleResumeGame(game.id)}
+                />
+                <IconButton
+                  onClick={(e) => { e.stopPropagation(); deleteSavedGame(game.id); }}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    color: 'text.secondary',
+                    '&:hover': { color: 'error.main' },
+                  }}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
               </Box>
-            </CardActionArea>
-          </Card>
+            ))}
+          </Box>
         </Box>
       )}
 
@@ -302,21 +323,48 @@ export default function HomeScreen() {
         </Box>
       )}
 
-      {/* Abandon dialog */}
-      <Dialog open={abandonDialog} onClose={() => setAbandonDialog(false)}>
-        <DialogTitle>Abandon Current Game?</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Starting a new game will abandon the current one. This cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAbandonDialog(false)}>Cancel</Button>
-          <Button onClick={confirmAbandon} color="error" variant="contained">
-            Abandon & Start New
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
+  );
+}
+
+function GameCard({ game, onClick, active }: { game: Game; onClick: () => void; active?: boolean }) {
+  const theme = useTheme();
+  return (
+    <Card
+      className={active ? 'animate-pulse-glow' : undefined}
+      sx={{
+        border: `2px solid ${alpha(theme.palette.primary.main, active ? 0.5 : 0.2)}`,
+        bgcolor: alpha(theme.palette.primary.main, active ? 0.05 : 0.02),
+      }}
+    >
+      <CardActionArea onClick={onClick} sx={{ p: 2, minHeight: 64 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              {game.teams[0].name} vs {game.teams[1].name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Round {game.currentRound} · {game.phase === 'bidding' ? 'Bidding' : game.phase === 'tricks' ? 'Tricks' : game.phase === 'scoring' ? 'Scoring' : 'Complete'}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
+              {game.teams.map(t => {
+                const { score } = getLatestTeamScore(game, t.id);
+                return (
+                  <Typography key={t.id} variant="body2" color="text.secondary">
+                    <strong style={{ color: theme.palette.primary.main }}>{t.name}</strong>{' '}
+                    <span style={{ fontFamily: monoFont }}>{score}</span>
+                  </Typography>
+                );
+              })}
+            </Box>
+          </Box>
+          {active ? (
+            <PlayArrowIcon color="primary" sx={{ fontSize: 28 }} />
+          ) : (
+            <SwapHorizIcon color="primary" sx={{ fontSize: 24 }} />
+          )}
+        </Box>
+      </CardActionArea>
+    </Card>
   );
 }
