@@ -64,6 +64,9 @@ interface GameStore {
   editRound: (roundNumber: number) => void;
   cancelEditRound: () => void;
 
+  // Round notes
+  addRoundNote: (roundNumber: number, note: string) => void;
+
   // Settings (allowed any time during active game)
   updateSettings: (settings: GameSettings) => void;
 
@@ -544,6 +547,19 @@ export const useGameStore = create<GameStore>()(
           currentGame: {
             ...game,
             phase: 'bidding' as GamePhase,
+          },
+        });
+      },
+
+      addRoundNote: (roundNumber, note) => {
+        const game = get().currentGame;
+        if (!game) return;
+        set({
+          currentGame: {
+            ...game,
+            rounds: game.rounds.map(r =>
+              r.roundNumber === roundNumber ? { ...r, note: note.trim() || undefined } : r
+            ),
           },
         });
       },

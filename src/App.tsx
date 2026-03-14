@@ -11,21 +11,18 @@ import GameScreen from './screens/GameScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import PlayerStatsScreen from './screens/PlayerStatsScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import WatchScreen from './screens/WatchScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
 import InstallPrompt from './components/InstallPrompt';
 
-export default function App() {
-  const darkMode = useGameStore(s => s.darkMode);
-  const theme = useMemo(() => (darkMode ? darkTheme : lightTheme), [darkMode]);
+function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, isGuest, loading, init } = useAuthStore();
   const [syncing, setSyncing] = useState(false);
 
-  // Initialise auth on mount
   useEffect(() => {
     init();
   }, [init]);
 
-  // Load cloud state when user logs in, then start auto-sync
   useEffect(() => {
     if (!user) return;
 
@@ -52,46 +49,57 @@ export default function App() {
 
   const isAuthenticated = !!user || isGuest;
 
+  if (loading || syncing) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 2,
+          bgcolor: 'background.default',
+        }}
+      >
+        <CircularProgress color="primary" />
+        <Typography variant="body2" color="text.secondary">
+          {syncing ? 'Loading your games...' : 'Loading...'}
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <WelcomeScreen />;
+  }
+
+  return <>{children}</>;
+}
+
+export default function App() {
+  const darkMode = useGameStore(s => s.darkMode);
+  const theme = useMemo(() => (darkMode ? darkTheme : lightTheme), [darkMode]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {loading || syncing ? (
-        <Box
-          sx={{
-            minHeight: '100dvh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2,
-            bgcolor: 'background.default',
-          }}
-        >
-          <CircularProgress color="primary" />
-          <Typography variant="body2" color="text.secondary">
-            {syncing ? 'Loading your games...' : 'Loading...'}
-          </Typography>
-        </Box>
-      ) : !isAuthenticated ? (
-        <Router>
-          <Routes>
-            <Route path="*" element={<WelcomeScreen />} />
-          </Routes>
-        </Router>
-      ) : (
-        <Router>
-          <Routes>
-            <Route path="/" element={<HomeScreen />} />
-            <Route path="/setup" element={<SetupScreen />} />
-            <Route path="/game" element={<GameScreen />} />
-            <Route path="/history" element={<HistoryScreen />} />
-            <Route path="/stats" element={<PlayerStatsScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <InstallPrompt />
-        </Router>
-      )}
+      <Router>
+        <Routes>
+          {/* Public route — no auth required */}
+          <Route path="/watch/:userId" element={<WatchScreen />} />
+
+          {/* Auth-gated routes */}
+          <Route path="/" element={<AuthGate><HomeScreen /></AuthGate>} />
+          <Route path="/setup" element={<AuthGate><SetupScreen /></AuthGate>} />
+          <Route path="/game" element={<AuthGate><GameScreen /></AuthGate>} />
+          <Route path="/history" element={<AuthGate><HistoryScreen /></AuthGate>} />
+          <Route path="/stats" element={<AuthGate><PlayerStatsScreen /></AuthGate>} />
+          <Route path="/settings" element={<AuthGate><SettingsScreen /></AuthGate>} />
+          <Route path="*" element={<AuthGate><Navigate to="/" replace /></AuthGate>} />
+        </Routes>
+        <InstallPrompt />
+      </Router>
     </ThemeProvider>
   );
 }

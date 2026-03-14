@@ -10,6 +10,8 @@ import {
   Toolbar,
   Chip,
   Divider,
+  TextField,
+  Snackbar,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -20,8 +22,11 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import HomeIcon from '@mui/icons-material/Home';
 import ShareIcon from '@mui/icons-material/Share';
+import LinkIcon from '@mui/icons-material/Link';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
+import { useAuthStore } from '../../store/authStore';
+import { setSharingEnabled } from '../../lib/cloudSync';
 import { formatScore } from '../../utils/scoring';
 import { shareScorecard } from '../../utils/shareScorecard';
 import RenameDialog from '../../components/RenameDialog';
@@ -33,8 +38,10 @@ import { haptic } from '../../utils/haptic';
 export default function ScoringView() {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { currentGame, startNextRound, undoLastRound, editRound } = useGameStore();
+  const { currentGame, startNextRound, undoLastRound, editRound, addRoundNote } = useGameStore();
+  const user = useAuthStore(s => s.user);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [snackMsg, setSnackMsg] = useState('');
   const scorecardRef = useRef<HTMLDivElement>(null);
 
   if (!currentGame) return null;
@@ -42,6 +49,23 @@ export default function ScoringView() {
   const completedRounds = currentGame.rounds.filter(r => r.isComplete);
   const latestRound = completedRounds[completedRounds.length - 1];
   if (!latestRound) return null;
+
+  const handleCopyLiveLink = async () => {
+    if (!user) {
+      setSnackMsg('Sign in to share a live link');
+      return;
+    }
+    // Enable sharing on the Supabase row
+    await setSharingEnabled(user.id, true);
+    const url = `${window.location.origin}/watch/${user.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setSnackMsg('Live link copied!');
+    } catch {
+      setSnackMsg(url);
+    }
+    haptic('light');
+  };
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 12 }}>
@@ -54,6 +78,14 @@ export default function ScoringView() {
             <Typography variant="h6">Round {latestRound.roundNumber} · Results</Typography>
           </Box>
           <EndGameDialog />
+          <IconButton
+            onClick={handleCopyLiveLink}
+            color="primary"
+            sx={{ width: 40, height: 40 }}
+            title="Copy live spectator link"
+          >
+            <LinkIcon fontSize="small" />
+          </IconButton>
           <IconButton
             onClick={() => {
               if (!scorecardRef.current || !currentGame) return;
@@ -228,6 +260,21 @@ export default function ScoringView() {
           Tap a round to edit it
         </Typography>
         <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
+
+        {/* Round note input */}
+        <Box sx={{ mt: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label={`Round ${latestRound.roundNumber} note`}
+            placeholder="e.g. Alex went blind nil and made it!"
+            value={latestRound.note || ''}
+            onChange={e => addRoundNote(latestRound.roundNumber, e.target.value)}
+            inputProps={{ maxLength: 200 }}
+            multiline
+            maxRows={2}
+          />
+        </Box>
       </Box>
 
       {/* Sticky Next Round */}
@@ -259,6 +306,12 @@ export default function ScoringView() {
       </Box>
 
       <RenameDialog open={renameOpen} onClose={() => setRenameOpen(false)} />
+      <Snackbar
+        open={!!snackMsg}
+        autoHideDuration={3000}
+        onClose={() => setSnackMsg('')}
+        message={snackMsg}
+      />
     </Box>
   );
 }

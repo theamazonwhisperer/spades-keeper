@@ -230,6 +230,11 @@ export default function GameOverView() {
                   );
                 })}
               </Box>
+              {round.note && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5, fontStyle: 'italic' }}>
+                  {round.note}
+                </Typography>
+              )}
               {round.roundNumber < completedRounds.length && (
                 <Divider sx={{ mt: 1.5 }} />
               )}

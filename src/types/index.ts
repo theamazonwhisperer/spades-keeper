@@ -62,6 +62,7 @@ export interface Round {
   playerData: PlayerRoundData[];
   teamScores: TeamRoundScore[];
   isComplete: boolean;
+  note?: string;
 }
 
 export type GamePhase = 'bidding' | 'tricks' | 'scoring' | 'complete';
