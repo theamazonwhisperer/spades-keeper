@@ -24,7 +24,7 @@ import { GameSettings } from '../types';
 export default function SetupScreen() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { startGame, savedPlayerNames } = useGameStore();
+  const { startGame, savedPlayerNames, defaultSettings } = useGameStore();
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   const [teamName1, setTeamName1] = useState('');
@@ -33,12 +33,12 @@ export default function SetupScreen() {
   const [p2, setP2] = useState('');
   const [p3, setP3] = useState('');
   const [p4, setP4] = useState('');
-  const [winTarget, setWinTarget] = useState<200 | 300 | 500>(500);
-  const [maxRounds, setMaxRounds] = useState<'10' | 'unlimited'>('unlimited');
-  const [nilValue, setNilValue] = useState<50 | 100>(100);
-  const [blindNilValue, setBlindNilValue] = useState<100 | 200>(200);
-  const [doubleOn10, setDoubleOn10] = useState(true);
-  const [failedNilCountsAsBags, setFailedNilCountsAsBags] = useState(false);
+  const [winTarget, setWinTarget] = useState<200 | 300 | 500>(defaultSettings.winTarget);
+  const [maxRounds, setMaxRounds] = useState<'10' | 'unlimited'>(defaultSettings.maxRounds === 10 ? '10' : 'unlimited');
+  const [nilValue, setNilValue] = useState<50 | 100>(defaultSettings.nilValue);
+  const [blindNilValue, setBlindNilValue] = useState<100 | 200>(defaultSettings.blindNilValue);
+  const [doubleOn10, setDoubleOn10] = useState(defaultSettings.doubleOn10);
+  const [failedNilCountsAsBags, setFailedNilCountsAsBags] = useState(defaultSettings.failedNilCountsAsBags);
 
   const canStart =
     teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim();

@@ -20,6 +20,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ScienceIcon from '@mui/icons-material/Science';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GoogleIcon from '@mui/icons-material/Google';
@@ -34,16 +35,11 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const theme = useTheme();
   const {
-    currentGame, savedGames, playerStats,
+    currentGame, savedGames,
     abandonGame, saveAndNewGame, resumeGame, deleteSavedGame,
     toggleDarkMode, darkMode,
   } = useGameStore();
   const { user, isGuest, signOut, signInWithGoogle } = useAuthStore();
-
-  const topPlayers = Object.values(playerStats)
-    .filter(s => s.gamesPlayed >= 1)
-    .sort((a, b) => b.wins - a.wins || b.gamesPlayed - a.gamesPlayed)
-    .slice(0, 6);
 
   const handleNewGame = () => {
     if (currentGame) {
@@ -149,6 +145,15 @@ export default function HomeScreen() {
               sx={{ width: 48, height: 48 }}
             >
               <HistoryIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Settings">
+            <IconButton
+              onClick={() => navigate('/settings')}
+              color="primary"
+              sx={{ width: 48, height: 48 }}
+            >
+              <SettingsIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title={darkMode ? 'Light Mode' : 'Dark Mode'}>
@@ -299,28 +304,13 @@ export default function HomeScreen() {
         </Box>
       )}
 
-      {/* Quick stats link */}
-      {topPlayers.length > 0 && (
-        <Box className="animate-slide-up" sx={{ mb: 3, animationDelay: '200ms' }}>
-          <Button
-            variant="outlined"
-            fullWidth
-            startIcon={<LeaderboardIcon />}
-            onClick={() => navigate('/stats')}
-            sx={{ py: 1.4, fontSize: '0.95rem' }}
-          >
-            Player Stats ({topPlayers.length} player{topPlayers.length !== 1 ? 's' : ''})
-          </Button>
-        </Box>
-      )}
-
       {/* Version */}
       <Typography
         variant="caption"
         color="text.disabled"
         sx={{ textAlign: 'center', display: 'block', mt: 4, mb: 1, fontSize: '0.65rem' }}
       >
-        v1.3
+        v1.4
       </Typography>
 
     </Box>

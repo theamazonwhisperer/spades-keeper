@@ -33,6 +33,7 @@ interface GameStore {
   deletedGames: Game[];      // soft-deleted games for recovery
   playerStats: Record<string, PlayerStats>;
   savedPlayerNames: string[];  // remembered player names for quick setup
+  defaultSettings: GameSettings;
   darkMode: boolean;
 
   // Editing state
@@ -86,6 +87,7 @@ interface GameStore {
   removeSavedPlayerName: (name: string) => void;
 
   // Settings
+  updateDefaultSettings: (settings: GameSettings) => void;
   toggleDarkMode: () => void;
 }
 
@@ -98,6 +100,14 @@ export const useGameStore = create<GameStore>()(
       deletedGames: [],
       playerStats: {},
       savedPlayerNames: [],
+      defaultSettings: {
+        winTarget: 500,
+        maxRounds: null,
+        nilValue: 100,
+        blindNilValue: 200,
+        doubleOn10: true,
+        failedNilCountsAsBags: false,
+      },
       darkMode: true, // default to dark mode for card game feel
       editingRoundNumber: null,
       editSnapshot: null,
@@ -626,6 +636,10 @@ export const useGameStore = create<GameStore>()(
 
       removeSavedPlayerName: (name) => {
         set({ savedPlayerNames: get().savedPlayerNames.filter(n => n !== name) });
+      },
+
+      updateDefaultSettings: (settings) => {
+        set({ defaultSettings: settings });
       },
 
       toggleDarkMode: () => {
