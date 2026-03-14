@@ -29,6 +29,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import LinkIcon from '@mui/icons-material/Link';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useAuthStore } from '../../store/authStore';
@@ -37,6 +38,7 @@ import { formatScore } from '../../utils/scoring';
 import { shareScorecard } from '../../utils/shareScorecard';
 import RenameDialog from '../../components/RenameDialog';
 import EndGameDialog from '../../components/EndGameDialog';
+import GameSettingsDialog from '../../components/GameSettingsDialog';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
@@ -50,6 +52,7 @@ export default function ScoringView() {
   const [snackMsg, setSnackMsg] = useState('');
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [endGameOpen, setEndGameOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const scorecardRef = useRef<HTMLDivElement>(null);
 
   if (!currentGame) return null;
@@ -116,6 +119,30 @@ export default function ScoringView() {
             <Typography variant="h6">Round {latestRound.roundNumber} · Results</Typography>
           </Box>
           <IconButton
+            onClick={handleUndo}
+            color="primary"
+            sx={{ width: 40, height: 40 }}
+            title="Undo Round"
+          >
+            <UndoIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            onClick={handleCopyLiveLink}
+            color="primary"
+            sx={{ width: 40, height: 40 }}
+            title="Copy Live Link"
+          >
+            <LinkIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            onClick={handleShare}
+            color="primary"
+            sx={{ width: 40, height: 40 }}
+            title="Share Scorecard"
+          >
+            <ShareIcon fontSize="small" />
+          </IconButton>
+          <IconButton
             onClick={e => setMenuAnchor(e.currentTarget)}
             color="primary"
             sx={{ width: 40, height: 40 }}
@@ -131,21 +158,13 @@ export default function ScoringView() {
         open={!!menuAnchor}
         onClose={() => setMenuAnchor(null)}
       >
-        <MenuItem onClick={handleUndo}>
-          <ListItemIcon><UndoIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Undo Round</ListItemText>
-        </MenuItem>
         <MenuItem onClick={handleRename}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Rename Teams</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleShare}>
-          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Share Scorecard</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleCopyLiveLink}>
-          <ListItemIcon><LinkIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Copy Live Link</ListItemText>
+        <MenuItem onClick={() => { setMenuAnchor(null); setSettingsOpen(true); }}>
+          <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Game Settings</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => { setMenuAnchor(null); setEndGameOpen(true); }}>
           <ListItemIcon><StopCircleIcon fontSize="small" color="error" /></ListItemIcon>
@@ -331,6 +350,7 @@ export default function ScoringView() {
       </Box>
 
       <RenameDialog open={renameOpen} onClose={() => setRenameOpen(false)} />
+      <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <EndGameDialog externalOpen={endGameOpen} onExternalClose={() => setEndGameOpen(false)} />
       <Snackbar
         open={!!snackMsg}
