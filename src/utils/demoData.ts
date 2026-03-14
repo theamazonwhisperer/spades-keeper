@@ -29,6 +29,7 @@ export function loadDemoGame() {
     nilValue: 100,
     blindNilValue: 200,
     doubleOn10: true,
+    failedNilCountsAsBags: false,
   };
 
   // Helper to build a round and calculate scores

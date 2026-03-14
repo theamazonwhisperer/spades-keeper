@@ -37,7 +37,9 @@ export function calculateRoundScores(
 
     let teamBid = 0;
     let teamTricks = 0;
+    let failedNilTricks = 0;
     const nilBonuses: NilBonus[] = [];
+    const failedNilCountsAsBags = game.settings.failedNilCountsAsBags ?? false;
 
     for (const player of teamPlayers) {
       const pd = playerData.find(d => d.playerId === player.id);
@@ -59,6 +61,10 @@ export function calculateRoundScores(
           made,
           score: made ? nilValue : -nilValue,
         });
+        // Track failed nil tricks separately for bags-only mode
+        if (!made && failedNilCountsAsBags) {
+          failedNilTricks += tricks;
+        }
         // Nil bids contribute 0 to team bid
       } else {
         teamBid += pd.bid;
@@ -72,12 +78,19 @@ export function calculateRoundScores(
     let contractScore: number;
     let bags: number;
 
-    if (teamTricks >= teamBid) {
+    // When failedNilCountsAsBags is true, broken nil tricks don't help
+    // make the contract — only non-nil player tricks count for the contract,
+    // and the broken nil tricks are added as pure bags.
+    const contractTricks = failedNilCountsAsBags
+      ? teamTricks - failedNilTricks
+      : teamTricks;
+
+    if (contractTricks >= teamBid) {
       contractScore = teamBid * 10 * multiplier;
-      bags = teamTricks - teamBid;
+      bags = teamTricks - teamBid; // total bags still includes all tricks
     } else {
       contractScore = -(teamBid * 10 * multiplier);
-      bags = 0; // no bags when set
+      bags = failedNilCountsAsBags ? failedNilTricks : 0; // failed nil tricks still become bags
     }
 
     const totalBags = prevBags + bags;

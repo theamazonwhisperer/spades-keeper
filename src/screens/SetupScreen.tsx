@@ -37,6 +37,7 @@ export default function SetupScreen() {
   const [nilValue, setNilValue] = useState<50 | 100>(100);
   const [blindNilValue, setBlindNilValue] = useState<100 | 200>(200);
   const [doubleOn10, setDoubleOn10] = useState(true);
+  const [failedNilCountsAsBags, setFailedNilCountsAsBags] = useState(false);
 
   const canStart =
     teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim();
@@ -49,6 +50,7 @@ export default function SetupScreen() {
       nilValue,
       blindNilValue,
       doubleOn10,
+      failedNilCountsAsBags,
     };
     startGame(
       [teamName1.trim(), teamName2.trim()],
@@ -259,6 +261,22 @@ export default function SetupScreen() {
           >
             <ToggleButton value={100}>±100 pts</ToggleButton>
             <ToggleButton value={200}>±200 pts</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Box sx={{ mb: 2.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
+            Failed Nil Tricks
+          </Typography>
+          <ToggleButtonGroup
+            value={failedNilCountsAsBags}
+            exclusive
+            onChange={(_, v) => v !== null && setFailedNilCountsAsBags(v)}
+            fullWidth
+            size="medium"
+          >
+            <ToggleButton value={false}>Count Toward Bid</ToggleButton>
+            <ToggleButton value={true}>Count as Bags</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 

@@ -18,6 +18,7 @@ export interface GameSettings {
   nilValue: 50 | 100;        // points per nil (default 100)
   blindNilValue: 100 | 200;  // points per blind nil (default 200)
   doubleOn10: boolean;        // true = bids of 10+ score double points
+  failedNilCountsAsBags: boolean; // true = broken nil tricks are overtricks/bags only; false = count toward team bid
 }
 
 export interface PlayerStats {
