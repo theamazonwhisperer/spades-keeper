@@ -12,6 +12,10 @@ import {
   Divider,
   TextField,
   Snackbar,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -23,6 +27,8 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import HomeIcon from '@mui/icons-material/Home';
 import ShareIcon from '@mui/icons-material/Share';
 import LinkIcon from '@mui/icons-material/Link';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import StopCircleIcon from '@mui/icons-material/StopCircle';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useAuthStore } from '../../store/authStore';
@@ -42,6 +48,8 @@ export default function ScoringView() {
   const user = useAuthStore(s => s.user);
   const [renameOpen, setRenameOpen] = useState(false);
   const [snackMsg, setSnackMsg] = useState('');
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [endGameOpen, setEndGameOpen] = useState(false);
   const scorecardRef = useRef<HTMLDivElement>(null);
 
   if (!currentGame) return null;
@@ -51,11 +59,11 @@ export default function ScoringView() {
   if (!latestRound) return null;
 
   const handleCopyLiveLink = async () => {
+    setMenuAnchor(null);
     if (!user) {
       setSnackMsg('Sign in to share a live link');
       return;
     }
-    // Enable sharing on the Supabase row
     await setSharingEnabled(user.id, true);
     const url = `${window.location.origin}/watch/${user.id}`;
     try {
@@ -65,6 +73,36 @@ export default function ScoringView() {
       setSnackMsg(url);
     }
     haptic('light');
+  };
+
+  const handleShare = async () => {
+    setMenuAnchor(null);
+    if (!scorecardRef.current || !currentGame) return;
+    const ts = latestRound.teamScores;
+    const fallback = [
+      `♠ SpadesKeeper · Round ${latestRound.roundNumber}`,
+      ...ts.map(s => {
+        const t = currentGame.teams.find(t2 => t2.id === s.teamId);
+        return `${t?.name}: ${s.cumulativeScore}`;
+      }),
+    ].join('\n');
+    shareScorecard({
+      element: scorecardRef.current,
+      isDark: theme.palette.mode === 'dark',
+      text: `Round ${latestRound.roundNumber} scores`,
+      fallbackText: fallback,
+    });
+  };
+
+  const handleUndo = () => {
+    setMenuAnchor(null);
+    haptic('medium');
+    undoLastRound();
+  };
+
+  const handleRename = () => {
+    setMenuAnchor(null);
+    setRenameOpen(true);
   };
 
   return (
@@ -77,56 +115,43 @@ export default function ScoringView() {
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6">Round {latestRound.roundNumber} · Results</Typography>
           </Box>
-          <EndGameDialog />
           <IconButton
-            onClick={handleCopyLiveLink}
-            color="primary"
-            sx={{ width: 40, height: 40 }}
-            title="Copy live spectator link"
-          >
-            <LinkIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            onClick={() => {
-              if (!scorecardRef.current || !currentGame) return;
-              const ts = latestRound.teamScores;
-              const fallback = [
-                `♠ SpadesKeeper · Round ${latestRound.roundNumber}`,
-                ...ts.map(s => {
-                  const t = currentGame.teams.find(t2 => t2.id === s.teamId);
-                  return `${t?.name}: ${s.cumulativeScore}`;
-                }),
-              ].join('\n');
-              shareScorecard({
-                element: scorecardRef.current,
-                isDark: theme.palette.mode === 'dark',
-                text: `Round ${latestRound.roundNumber} scores`,
-                fallbackText: fallback,
-              });
-            }}
+            onClick={e => setMenuAnchor(e.currentTarget)}
             color="primary"
             sx={{ width: 40, height: 40 }}
           >
-            <ShareIcon fontSize="small" />
+            <MoreVertIcon fontSize="small" />
           </IconButton>
-          <Button
-            startIcon={<UndoIcon />}
-            size="small"
-            onClick={() => { haptic('medium'); undoLastRound(); }}
-            sx={{ fontSize: '0.75rem', mr: 0.5 }}
-          >
-            Undo
-          </Button>
-          <Button
-            startIcon={<EditIcon />}
-            size="small"
-            onClick={() => setRenameOpen(true)}
-            sx={{ fontSize: '0.75rem' }}
-          >
-            Rename
-          </Button>
         </Toolbar>
       </AppBar>
+
+      {/* Overflow menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={!!menuAnchor}
+        onClose={() => setMenuAnchor(null)}
+      >
+        <MenuItem onClick={handleUndo}>
+          <ListItemIcon><UndoIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Undo Round</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleRename}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Rename Teams</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleShare}>
+          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Share Scorecard</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleCopyLiveLink}>
+          <ListItemIcon><LinkIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Copy Live Link</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setMenuAnchor(null); setEndGameOpen(true); }}>
+          <ListItemIcon><StopCircleIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>End Game</ListItemText>
+        </MenuItem>
+      </Menu>
 
       <Box ref={scorecardRef} sx={{ px: 1.5, pt: 1 }}>
         {/* Round result cards */}
@@ -306,6 +331,7 @@ export default function ScoringView() {
       </Box>
 
       <RenameDialog open={renameOpen} onClose={() => setRenameOpen(false)} />
+      <EndGameDialog externalOpen={endGameOpen} onExternalClose={() => setEndGameOpen(false)} />
       <Snackbar
         open={!!snackMsg}
         autoHideDuration={3000}

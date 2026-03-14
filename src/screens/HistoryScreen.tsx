@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -27,6 +28,8 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PeopleIcon from '@mui/icons-material/People';
 import { useGameStore } from '../store/gameStore';
+import { useAuthStore } from '../store/authStore';
+import { loadSharedGames, clearSharedGames } from '../lib/cloudSync';
 import ScoreHistoryTable from '../components/ScoreHistoryTable';
 import { monoFont } from '../theme';
 
@@ -36,13 +39,93 @@ export default function HistoryScreen() {
   const {
     completedGames, deleteHistory, clearAllHistory,
     deletedGames, restoreDeletedGame, permanentlyDeleteGame, clearDeletedGames,
+    importGame,
   } = useGameStore();
+  const user = useAuthStore(s => s.user);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [clearDialog, setClearDialog] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
 
+  // Pull-to-refresh state
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const PULL_THRESHOLD = 80;
+
+  const handleRefresh = useCallback(async () => {
+    if (!user || refreshing) return;
+    setRefreshing(true);
+    try {
+      const sharedGames = await loadSharedGames(user.id);
+      if (sharedGames.length > 0) {
+        const existingIds = new Set(completedGames.map(g => g.id));
+        const newGames = sharedGames.filter(g => !existingIds.has(g.id));
+        newGames.forEach(g => importGame(g));
+        if (sharedGames.length > 0) {
+          await clearSharedGames(user.id, sharedGames.map(g => g.id));
+        }
+      }
+    } catch (e) {
+      console.error('Refresh failed:', e);
+    }
+    setRefreshing(false);
+    setPullDistance(0);
+  }, [user, refreshing, completedGames, importGame]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (scrollRef.current && scrollRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartY.current || refreshing) return;
+    const diff = e.touches[0].clientY - touchStartY.current;
+    if (diff > 0 && scrollRef.current && scrollRef.current.scrollTop === 0) {
+      setPullDistance(Math.min(diff * 0.5, PULL_THRESHOLD * 1.5));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (pullDistance >= PULL_THRESHOLD) {
+      handleRefresh();
+    } else {
+      setPullDistance(0);
+    }
+    touchStartY.current = 0;
+  };
+
   return (
-    <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 4 }}>
+    <Box
+      ref={scrollRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 4 }}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(pullDistance > 0 || refreshing) && (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: refreshing ? 48 : pullDistance,
+            overflow: 'hidden',
+            transition: refreshing ? 'height 0.2s ease' : 'none',
+          }}
+        >
+          <CircularProgress
+            size={24}
+            thickness={5}
+            variant={refreshing ? 'indeterminate' : 'determinate'}
+            value={Math.min(100, (pullDistance / PULL_THRESHOLD) * 100)}
+            sx={{ opacity: Math.min(1, pullDistance / (PULL_THRESHOLD * 0.5)) }}
+          />
+        </Box>
+      )}
+
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
           <IconButton edge="start" onClick={() => navigate('/')} color="inherit" sx={{ width: 48, height: 48 }}>

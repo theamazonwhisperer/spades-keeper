@@ -8,6 +8,7 @@ import {
   CardActionArea,
   IconButton,
   Tooltip,
+  Paper,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -17,18 +18,14 @@ import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import ScienceIcon from '@mui/icons-material/Science';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SettingsIcon from '@mui/icons-material/Settings';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import LogoutIcon from '@mui/icons-material/Logout';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GoogleIcon from '@mui/icons-material/Google';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
 import { getLatestTeamScore } from '../utils/scoring';
-import { loadDemoGame } from '../utils/demoData';
 import { monoFont } from '../theme';
 import { Game } from '../types';
 
@@ -40,11 +37,10 @@ export default function HomeScreen() {
     abandonGame, saveAndNewGame, resumeGame, deleteSavedGame,
     toggleDarkMode, darkMode,
   } = useGameStore();
-  const { user, isGuest, signOut, signInWithGoogle } = useAuthStore();
+  const { user, isGuest, signInWithGoogle } = useAuthStore();
 
   const handleNewGame = () => {
     if (currentGame) {
-      // Save current game and go to setup
       saveAndNewGame();
     }
     navigate('/setup');
@@ -66,10 +62,10 @@ export default function HomeScreen() {
         display: 'flex',
         flexDirection: 'column',
         px: 2.5,
-        pb: 4,
+        pb: 12,
       }}
     >
-      {/* Top bar */}
+      {/* Top bar — minimal */}
       <Box
         sx={{
           display: 'flex',
@@ -80,17 +76,6 @@ export default function HomeScreen() {
         }}
       >
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-          {!currentGame && (
-            <Tooltip title="Load Demo Game">
-              <IconButton
-                onClick={() => { loadDemoGame(); navigate('/game'); }}
-                color="primary"
-                sx={{ width: 48, height: 48 }}
-              >
-                <ScienceIcon />
-              </IconButton>
-            </Tooltip>
-          )}
           {user && (
             <Tooltip title={`Signed in as ${user.email}`}>
               <Box
@@ -129,64 +114,15 @@ export default function HomeScreen() {
             </Tooltip>
           )}
         </Box>
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <Tooltip title="Player Stats">
-            <IconButton
-              onClick={() => navigate('/stats')}
-              color="primary"
-              sx={{ width: 48, height: 48 }}
-            >
-              <LeaderboardIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Game History">
-            <IconButton
-              onClick={() => navigate('/history')}
-              color="primary"
-              sx={{ width: 48, height: 48 }}
-            >
-              <HistoryIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Settings">
-            <IconButton
-              onClick={() => navigate('/settings')}
-              color="primary"
-              sx={{ width: 48, height: 48 }}
-            >
-              <SettingsIcon />
-            </IconButton>
-          </Tooltip>
-          {user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '') && (
-            <Tooltip title="Admin">
-              <IconButton
-                onClick={() => navigate('/admin')}
-                color="error"
-                sx={{ width: 48, height: 48 }}
-              >
-                <AdminPanelSettingsIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-          <Tooltip title={darkMode ? 'Light Mode' : 'Dark Mode'}>
-            <IconButton
-              onClick={toggleDarkMode}
-              color="primary"
-              sx={{ width: 48, height: 48 }}
-            >
-              {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Sign Out">
-            <IconButton
-              onClick={signOut}
-              color="primary"
-              sx={{ width: 48, height: 48 }}
-            >
-              <LogoutIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+        <Tooltip title={darkMode ? 'Light Mode' : 'Dark Mode'}>
+          <IconButton
+            onClick={toggleDarkMode}
+            color="primary"
+            sx={{ width: 44, height: 44 }}
+          >
+            {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Guest warning */}
@@ -325,6 +261,57 @@ export default function HomeScreen() {
         v3.0
       </Typography>
 
+      {/* Bottom Navigation */}
+      <Paper
+        elevation={8}
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          py: 1,
+          pb: 'max(0.5rem, env(safe-area-inset-bottom))',
+          borderTop: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+          bgcolor: alpha(theme.palette.background.paper, 0.95),
+          backdropFilter: 'blur(12px)',
+          zIndex: 10,
+        }}
+      >
+        <NavItem icon={<LeaderboardIcon />} label="Stats" onClick={() => navigate('/stats')} />
+        <NavItem icon={<HistoryIcon />} label="History" onClick={() => navigate('/history')} />
+        <NavItem icon={<SettingsIcon />} label="Settings" onClick={() => navigate('/settings')} />
+      </Paper>
+    </Box>
+  );
+}
+
+function NavItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  const theme = useTheme();
+  return (
+    <Box
+      onClick={onClick}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 0.25,
+        cursor: 'pointer',
+        color: 'text.secondary',
+        px: 2.5,
+        py: 0.5,
+        borderRadius: 2,
+        transition: 'color 0.15s',
+        '&:hover': { color: theme.palette.primary.main },
+        '&:active': { color: theme.palette.primary.main },
+      }}
+    >
+      {icon}
+      <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600, lineHeight: 1 }}>
+        {label}
+      </Typography>
     </Box>
   );
 }

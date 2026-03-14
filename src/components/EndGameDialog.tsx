@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button,
   Dialog,
@@ -12,11 +12,25 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { haptic } from '../utils/haptic';
 
-export default function EndGameDialog() {
+interface Props {
+  /** If provided, the dialog is controlled externally (no built-in trigger button) */
+  externalOpen?: boolean;
+  onExternalClose?: () => void;
+}
+
+export default function EndGameDialog({ externalOpen, onExternalClose }: Props) {
   const navigate = useNavigate();
   const { currentGame, endGameEarly } = useGameStore();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+
+  const isExternal = externalOpen !== undefined;
+  const open = isExternal ? externalOpen : internalOpen;
+
+  // Reset confirmed state when dialog closes
+  useEffect(() => {
+    if (!open) setConfirmed(false);
+  }, [open]);
 
   if (!currentGame || currentGame.phase === 'complete') return null;
 
@@ -29,29 +43,35 @@ export default function EndGameDialog() {
   const handleFinalConfirm = () => {
     haptic('medium');
     endGameEarly();
-    setOpen(false);
-    setConfirmed(false);
+    handleClose();
     navigate('/game');
   };
 
   const handleClose = () => {
-    setOpen(false);
+    if (isExternal) {
+      onExternalClose?.();
+    } else {
+      setInternalOpen(false);
+    }
     setConfirmed(false);
   };
 
   return (
     <>
-      <Button
-        startIcon={<StopIcon />}
-        size="small"
-        color="error"
-        onClick={() => setOpen(true)}
-        sx={{ fontSize: '0.75rem' }}
-      >
-        End
-      </Button>
+      {/* Only show built-in trigger when not externally controlled */}
+      {!isExternal && (
+        <Button
+          startIcon={<StopIcon />}
+          size="small"
+          color="error"
+          onClick={() => setInternalOpen(true)}
+          sx={{ fontSize: '0.75rem' }}
+        >
+          End
+        </Button>
+      )}
 
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={!!open} onClose={handleClose}>
         <DialogTitle>
           {confirmed ? 'Are you really sure?' : 'End Game Early?'}
         </DialogTitle>

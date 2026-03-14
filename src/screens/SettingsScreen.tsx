@@ -24,8 +24,12 @@ import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import PendingIcon from '@mui/icons-material/Pending';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import ScienceIcon from '@mui/icons-material/Science';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
+import { loadDemoGame } from '../utils/demoData';
 import { getMyPlayerLinks, getPendingLinkRequests, acceptPlayerLink, declinePlayerLink, deletePlayerLink } from '../lib/cloudSync';
 import { GameSettings, PlayerLink } from '../types';
 import LinkPlayerDialog from '../components/LinkPlayerDialog';
@@ -41,6 +45,8 @@ export default function SettingsScreen() {
     updateDefaultSettings,
   } = useGameStore();
   const user = useAuthStore(s => s.user);
+  const signOut = useAuthStore(s => s.signOut);
+  const currentGame = useGameStore(s => s.currentGame);
 
   const [newName, setNewName] = useState('');
   const [linkDialogName, setLinkDialogName] = useState<string | null>(null);
@@ -367,6 +373,53 @@ export default function SettingsScreen() {
           sx={{ mb: 2 }}
         >
           Reset to Factory Defaults
+        </Button>
+
+        <Divider sx={{ my: 2 }} />
+
+        {/* Account & Tools */}
+        <Typography
+          variant="subtitle2"
+          color="text.secondary"
+          sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
+        >
+          Account
+        </Typography>
+
+        {!currentGame && (
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<ScienceIcon />}
+            onClick={() => { loadDemoGame(); navigate('/game'); }}
+            sx={{ mb: 1.5 }}
+          >
+            Load Demo Game
+          </Button>
+        )}
+
+        {user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '') && (
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<AdminPanelSettingsIcon />}
+            onClick={() => navigate('/admin')}
+            color="warning"
+            sx={{ mb: 1.5 }}
+          >
+            Admin Panel
+          </Button>
+        )}
+
+        <Button
+          variant="outlined"
+          fullWidth
+          startIcon={<LogoutIcon />}
+          onClick={signOut}
+          color="error"
+          sx={{ mb: 2 }}
+        >
+          Sign Out
         </Button>
       </Box>
 

@@ -13,12 +13,18 @@ import {
   alpha,
   Divider,
   LinearProgress,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import EditIcon from '@mui/icons-material/Edit';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import HomeIcon from '@mui/icons-material/Home';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import StopCircleIcon from '@mui/icons-material/StopCircle';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
@@ -38,6 +44,8 @@ export default function TricksView() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { currentGame, submitTricks, editBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [endGameOpen, setEndGameOpen] = useState(false);
 
   // useState must come before any early return (Rules of Hooks)
   const [tricks, setTricks] = useState<Record<string, number>>(() => {
@@ -131,18 +139,33 @@ export default function TricksView() {
               Assign all 13 tricks
             </Typography>
           </Box>
-          {!editingRoundNumber && <EndGameDialog />}
-          <Button
-            startIcon={<EditIcon />}
-            size="small"
-            variant="outlined"
-            onClick={editBids}
-            sx={{ fontSize: '0.75rem', mr: 0.5 }}
-          >
-            Edit Bids
-          </Button>
+          {!editingRoundNumber && (
+            <IconButton
+              onClick={e => setMenuAnchor(e.currentTarget)}
+              color="primary"
+              sx={{ width: 40, height: 40 }}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          )}
         </Toolbar>
       </AppBar>
+
+      {/* Overflow menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={!!menuAnchor}
+        onClose={() => setMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => { setMenuAnchor(null); editBids(); }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Edit Bids</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setMenuAnchor(null); setEndGameOpen(true); }}>
+          <ListItemIcon><StopCircleIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>End Game</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {/* Progress bar */}
       <Box sx={{ px: 1.5, pt: 1.5, pb: 0 }}>
@@ -424,6 +447,8 @@ export default function TricksView() {
           Confirm Tricks
         </Button>
       </Box>
+
+      <EndGameDialog externalOpen={endGameOpen} onExternalClose={() => setEndGameOpen(false)} />
     </Box>
   );
 }

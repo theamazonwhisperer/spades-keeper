@@ -14,6 +14,10 @@ import {
   useTheme,
   alpha,
   Divider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -21,6 +25,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import HomeIcon from '@mui/icons-material/Home';
 import SettingsIcon from '@mui/icons-material/Settings';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import StopCircleIcon from '@mui/icons-material/StopCircle';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
@@ -43,6 +49,8 @@ export default function BiddingView() {
   const { currentGame, submitBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [endGameOpen, setEndGameOpen] = useState(false);
 
   // Initialize from existing round data if we came back via Fix Bids
   const [bids, setBids] = useState<Record<string, BidState>>(() => {
@@ -156,18 +164,36 @@ export default function BiddingView() {
             </Typography>
           </Box>
           {!editingRoundNumber && (
-            <>
-              <EndGameDialog />
-              <IconButton onClick={() => setSettingsOpen(true)} color="primary" sx={{ width: 40, height: 40 }}>
-                <SettingsIcon fontSize="small" />
-              </IconButton>
-              <IconButton onClick={() => setRenameOpen(true)} color="primary" sx={{ width: 40, height: 40 }}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </>
+            <IconButton
+              onClick={e => setMenuAnchor(e.currentTarget)}
+              color="primary"
+              sx={{ width: 40, height: 40 }}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
           )}
         </Toolbar>
       </AppBar>
+
+      {/* Overflow menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={!!menuAnchor}
+        onClose={() => setMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => { setMenuAnchor(null); setRenameOpen(true); }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Rename Teams</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setMenuAnchor(null); setSettingsOpen(true); }}>
+          <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Game Settings</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setMenuAnchor(null); setEndGameOpen(true); }}>
+          <ListItemIcon><StopCircleIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>End Game</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {/* Bidding section */}
       <Box sx={{ display: 'flex', px: 1.5, pt: 1, gap: 1 }}>
@@ -396,6 +422,7 @@ export default function BiddingView() {
 
       <RenameDialog open={renameOpen} onClose={() => setRenameOpen(false)} />
       <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <EndGameDialog externalOpen={endGameOpen} onExternalClose={() => setEndGameOpen(false)} />
     </Box>
   );
 }
