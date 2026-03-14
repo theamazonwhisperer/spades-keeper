@@ -16,7 +16,6 @@ import HistoryIcon from '@mui/icons-material/History';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import ScienceIcon from '@mui/icons-material/Science';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -30,7 +29,7 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const theme = useTheme();
   const {
-    currentGame, savedGames, completedGames, playerStats,
+    currentGame, savedGames, playerStats,
     abandonGame, saveAndNewGame, resumeGame, deleteSavedGame,
     deletePlayerStats, clearAllPlayerStats,
     toggleDarkMode, darkMode,
@@ -53,8 +52,6 @@ export default function HomeScreen() {
     resumeGame(gameId);
     navigate('/game');
   };
-
-  const recentGames = completedGames.slice(0, 5);
 
   return (
     <Box
@@ -252,12 +249,15 @@ export default function HomeScreen() {
                         onClick={() => deletePlayerStats(key)}
                         sx={{
                           position: 'absolute',
-                          top: -4,
-                          right: -4,
-                          width: 20,
-                          height: 20,
-                          color: 'text.disabled',
-                          '&:hover': { color: 'error.main' },
+                          top: -6,
+                          right: -6,
+                          width: 24,
+                          height: 24,
+                          bgcolor: 'background.paper',
+                          border: `1px solid`,
+                          borderColor: 'divider',
+                          color: 'text.secondary',
+                          '&:hover': { color: 'error.main', borderColor: 'error.main' },
                         }}
                       >
                         <DeleteOutlineIcon sx={{ fontSize: 14 }} />
@@ -277,79 +277,6 @@ export default function HomeScreen() {
               </Box>
             </CardContent>
           </Card>
-        </Box>
-      )}
-
-      {/* Recent Games */}
-      {recentGames.length > 0 && (
-        <Box className="animate-slide-up" sx={{ animationDelay: '200ms' }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 1,
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              color="text.secondary"
-              sx={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
-            >
-              Recent Games
-            </Typography>
-            <Button size="small" onClick={() => navigate('/history')} sx={{ fontSize: '0.75rem' }}>
-              View All
-            </Button>
-          </Box>
-
-          <Box className="stagger-children" sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {recentGames.map(game => {
-              const winner = game.teams.find(t => t.id === game.winnerId);
-              const date = new Date(game.createdAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              });
-              const lastRound = game.rounds.filter(r => r.isComplete).slice(-1)[0];
-              return (
-                <Card
-                  key={game.id}
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => navigate('/history')}
-                >
-                  <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {winner && (
-                          <EmojiEventsIcon
-                            sx={{ fontSize: 16, color: '#F5A623' }}
-                          />
-                        )}
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {game.teams[0].name} vs {game.teams[1].name}
-                        </Typography>
-                      </Box>
-                      <Typography variant="caption" color="text.secondary">
-                        {date}
-                      </Typography>
-                    </Box>
-                    {lastRound && (
-                      <Box sx={{ display: 'flex', gap: 2, mt: 0.25 }}>
-                        {lastRound.teamScores.map(ts => {
-                          const teamName = game.teams.find(t => t.id === ts.teamId)?.name;
-                          return (
-                            <Typography key={ts.teamId} variant="caption" color="text.secondary">
-                              {teamName}: <strong style={{ fontFamily: monoFont }}>{ts.cumulativeScore}</strong>
-                            </Typography>
-                          );
-                        })}
-                      </Box>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </Box>
         </Box>
       )}
 
