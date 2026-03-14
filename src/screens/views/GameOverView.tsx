@@ -58,8 +58,23 @@ export default function GameOverView() {
     let blob: Blob | null = null;
 
     try {
-      // Add padding to the captured area
       const el = scorecardRef.current;
+
+      // Temporarily force the element to render at full size for capture
+      // (prevents clipping from page scroll / viewport)
+      const prevOverflow = el.style.overflow;
+      const prevHeight = el.style.height;
+      const prevPosition = el.style.position;
+      el.style.overflow = 'visible';
+      el.style.height = 'auto';
+      el.style.position = 'relative';
+
+      // Scroll to top to avoid offset issues
+      window.scrollTo(0, 0);
+
+      // Small delay to let browser re-layout
+      await new Promise(r => setTimeout(r, 100));
+
       const dataUrl = await toPng(el, {
         backgroundColor: theme.palette.mode === 'dark' ? '#0e1117' : '#f0f3f6',
         pixelRatio: 2,
@@ -67,6 +82,11 @@ export default function GameOverView() {
           padding: '16px',
         },
       });
+
+      // Restore original styles
+      el.style.overflow = prevOverflow;
+      el.style.height = prevHeight;
+      el.style.position = prevPosition;
 
       const res = await fetch(dataUrl);
       blob = await res.blob();

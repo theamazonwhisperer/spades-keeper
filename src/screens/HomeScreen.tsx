@@ -19,7 +19,11 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ScienceIcon from '@mui/icons-material/Science';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import LogoutIcon from '@mui/icons-material/Logout';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import GoogleIcon from '@mui/icons-material/Google';
 import { useGameStore } from '../store/gameStore';
+import { useAuthStore } from '../store/authStore';
 import { getLatestTeamScore } from '../utils/scoring';
 import { loadDemoGame } from '../utils/demoData';
 import { monoFont } from '../theme';
@@ -34,6 +38,7 @@ export default function HomeScreen() {
     deletePlayerStats, clearAllPlayerStats,
     toggleDarkMode, darkMode,
   } = useGameStore();
+  const { user, isGuest, signOut, signInWithGoogle } = useAuthStore();
 
   const topPlayers = Object.values(playerStats)
     .filter(s => s.gamesPlayed >= 1)
@@ -77,7 +82,7 @@ export default function HomeScreen() {
           pb: 2,
         }}
       >
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
           {!currentGame && (
             <Tooltip title="Load Demo Game">
               <IconButton
@@ -87,6 +92,43 @@ export default function HomeScreen() {
               >
                 <ScienceIcon />
               </IconButton>
+            </Tooltip>
+          )}
+          {user && (
+            <Tooltip title={`Signed in as ${user.email}`}>
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: `2px solid ${alpha(theme.palette.primary.main, 0.4)}`,
+                }}
+              >
+                {user.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      bgcolor: alpha(theme.palette.primary.main, 0.2),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Typography variant="caption" color="primary" sx={{ fontWeight: 700 }}>
+                      {(user.email?.[0] ?? '?').toUpperCase()}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
             </Tooltip>
           )}
         </Box>
@@ -109,8 +151,51 @@ export default function HomeScreen() {
               {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
             </IconButton>
           </Tooltip>
+          <Tooltip title="Sign Out">
+            <IconButton
+              onClick={signOut}
+              color="primary"
+              sx={{ width: 48, height: 48 }}
+            >
+              <LogoutIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
+
+      {/* Guest warning */}
+      {isGuest && (
+        <Card
+          sx={{
+            mb: 2,
+            bgcolor: alpha(theme.palette.warning.main, 0.08),
+            border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+          }}
+        >
+          <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+              <WarningAmberIcon sx={{ color: theme.palette.warning.main, fontSize: 20, mt: 0.25 }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.warning.main, mb: 0.5 }}>
+                  Guest mode — data saved locally only
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  If you clear cookies or switch devices, your games will be lost.
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<GoogleIcon />}
+                  onClick={signInWithGoogle}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Sign in to sync
+                </Button>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hero */}
       <Box className="animate-fade-in" sx={{ textAlign: 'center', py: 4 }}>
@@ -286,7 +371,7 @@ export default function HomeScreen() {
         color="text.disabled"
         sx={{ textAlign: 'center', display: 'block', mt: 4, mb: 1, fontSize: '0.65rem' }}
       >
-        v1.2
+        v1.3
       </Typography>
 
     </Box>
