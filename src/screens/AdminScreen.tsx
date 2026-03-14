@@ -24,15 +24,15 @@ import { monoFont } from '../theme';
 const ADMIN_EMAILS = ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'];
 
 interface UserStat {
-  user_id: string;
-  email: string;
-  created_at: string;
-  last_sign_in_at: string | null;
-  games_played: number;
-  games_completed: number;
-  active_game: boolean;
-  sharing_enabled: boolean;
-  player_names: string;
+  out_user_id: string;
+  out_email: string;
+  out_created_at: string;
+  out_last_sign_in_at: string | null;
+  out_games_played: number;
+  out_games_completed: number;
+  out_active_game: boolean;
+  out_sharing_enabled: boolean;
+  out_player_names: string;
 }
 
 export default function AdminScreen() {
@@ -71,8 +71,8 @@ export default function AdminScreen() {
     );
   }
 
-  const totalGames = users.reduce((sum, u) => sum + u.games_completed, 0);
-  const activeGames = users.filter(u => u.active_game).length;
+  const totalGames = users.reduce((sum, u) => sum + u.out_games_completed, 0);
+  const activeGames = users.filter(u => u.out_active_game).length;
   const totalUsers = users.length;
 
   const formatDate = (d: string | null) => {
@@ -155,12 +155,12 @@ export default function AdminScreen() {
           {users.map((u, i) => {
             let playerNames: string[] = [];
             try {
-              playerNames = JSON.parse(u.player_names);
+              playerNames = JSON.parse(u.out_player_names);
             } catch { /* ignore */ }
 
             return (
               <Card
-                key={u.user_id}
+                key={u.out_user_id}
                 sx={{
                   mb: 1,
                   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
@@ -177,17 +177,17 @@ export default function AdminScreen() {
                     </Typography>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {u.email}
+                        {u.out_email}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mt: 0.25 }}>
                         <Typography variant="caption" color="text.secondary" sx={{ fontFamily: monoFont }}>
-                          {u.games_completed} game{u.games_completed !== 1 ? 's' : ''}
+                          {u.out_games_completed} game{u.out_games_completed !== 1 ? 's' : ''}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Joined {formatDate(u.created_at)}
+                          Joined {formatDate(u.out_created_at)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Last seen {formatDate(u.last_sign_in_at)}
+                          Last seen {formatDate(u.out_last_sign_in_at)}
                         </Typography>
                       </Box>
                       {playerNames.length > 0 && (
@@ -199,10 +199,10 @@ export default function AdminScreen() {
                       )}
                     </Box>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                      {u.active_game && (
+                      {u.out_active_game && (
                         <Chip label="Playing" size="small" color="success" sx={{ fontSize: '0.6rem', height: 20, fontWeight: 700 }} />
                       )}
-                      {u.sharing_enabled && (
+                      {u.out_sharing_enabled && (
                         <Chip label="Live" size="small" color="info" sx={{ fontSize: '0.6rem', height: 20, fontWeight: 700 }} />
                       )}
                     </Box>
