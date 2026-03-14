@@ -32,6 +32,7 @@ export default function HomeScreen() {
   const {
     currentGame, savedGames, completedGames, playerStats,
     abandonGame, saveAndNewGame, resumeGame, deleteSavedGame,
+    deletePlayerStats, clearAllPlayerStats,
     toggleDarkMode, darkMode,
   } = useGameStore();
 
@@ -210,40 +211,69 @@ export default function HomeScreen() {
       {/* Player Records */}
       {topPlayers.length > 0 && (
         <Box className="animate-slide-up" sx={{ mb: 3, animationDelay: '200ms' }}>
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
-          >
-            Player Records
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
+            >
+              Player Records
+            </Typography>
+            <Button
+              size="small"
+              color="error"
+              onClick={clearAllPlayerStats}
+              sx={{ fontSize: '0.7rem' }}
+            >
+              Clear All
+            </Button>
+          </Box>
           <Card>
             <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {topPlayers.map(s => (
-                  <Box
-                    key={s.name}
-                    sx={{
-                      flex: '1 1 calc(33% - 8px)',
-                      minWidth: 80,
-                      textAlign: 'center',
-                      py: 0.75,
-                      px: 1,
-                      borderRadius: 1.5,
-                      bgcolor: alpha(theme.palette.primary.main, 0.06),
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', lineHeight: 1.2 }}>
-                      {s.name}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontFamily: monoFont, fontWeight: 700, color: theme.palette.primary.main }}
+                {topPlayers.map(s => {
+                  const key = s.name.toLowerCase().trim();
+                  return (
+                    <Box
+                      key={s.name}
+                      sx={{
+                        flex: '1 1 calc(33% - 8px)',
+                        minWidth: 80,
+                        textAlign: 'center',
+                        py: 0.75,
+                        px: 1,
+                        borderRadius: 1.5,
+                        bgcolor: alpha(theme.palette.primary.main, 0.06),
+                        position: 'relative',
+                      }}
                     >
-                      {s.wins}W–{s.losses}L
-                    </Typography>
-                  </Box>
-                ))}
+                      <IconButton
+                        size="small"
+                        onClick={() => deletePlayerStats(key)}
+                        sx={{
+                          position: 'absolute',
+                          top: -4,
+                          right: -4,
+                          width: 20,
+                          height: 20,
+                          color: 'text.disabled',
+                          '&:hover': { color: 'error.main' },
+                        }}
+                      >
+                        <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                      <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', lineHeight: 1.2 }}>
+                        {s.name}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontFamily: monoFont, fontWeight: 700, color: theme.palette.primary.main }}
+                      >
+                        {s.wins}W–{s.losses}L
+                      </Typography>
+                    </Box>
+                  );
+                })}
               </Box>
             </CardContent>
           </Card>

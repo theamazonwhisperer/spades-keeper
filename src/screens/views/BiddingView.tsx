@@ -20,12 +20,15 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import EditIcon from '@mui/icons-material/Edit';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import HomeIcon from '@mui/icons-material/Home';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import RenameDialog from '../../components/RenameDialog';
+import EndGameDialog from '../../components/EndGameDialog';
+import GameSettingsDialog from '../../components/GameSettingsDialog';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
 
@@ -39,6 +42,7 @@ export default function BiddingView() {
   const navigate = useNavigate();
   const { currentGame, submitBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Initialize from existing round data if we came back via Fix Bids
   const [bids, setBids] = useState<Record<string, BidState>>(() => {
@@ -152,9 +156,15 @@ export default function BiddingView() {
             </Typography>
           </Box>
           {!editingRoundNumber && (
-            <IconButton onClick={() => setRenameOpen(true)} color="primary" sx={{ width: 48, height: 48 }}>
-              <EditIcon fontSize="small" />
-            </IconButton>
+            <>
+              <EndGameDialog />
+              <IconButton onClick={() => setSettingsOpen(true)} color="primary" sx={{ width: 40, height: 40 }}>
+                <SettingsIcon fontSize="small" />
+              </IconButton>
+              <IconButton onClick={() => setRenameOpen(true)} color="primary" sx={{ width: 40, height: 40 }}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </>
           )}
         </Toolbar>
       </AppBar>
@@ -385,6 +395,7 @@ export default function BiddingView() {
       </Box>
 
       <RenameDialog open={renameOpen} onClose={() => setRenameOpen(false)} />
+      <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Box>
   );
 }

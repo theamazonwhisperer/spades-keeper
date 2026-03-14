@@ -30,6 +30,7 @@ interface GameStore {
   currentGame: Game | null;
   savedGames: Game[];        // paused/in-progress games
   completedGames: Game[];
+  deletedGames: Game[];      // soft-deleted games for recovery
   playerStats: Record<string, PlayerStats>;
   darkMode: boolean;
 
@@ -49,6 +50,9 @@ interface GameStore {
   deleteSavedGame: (gameId: string) => void;
   rematch: () => void;
 
+  // End game early
+  endGameEarly: () => void;
+
   // Round flow
   submitBids: (bids: BidInput[]) => void;
   editBids: () => void;
@@ -58,6 +62,9 @@ interface GameStore {
   editRound: (roundNumber: number) => void;
   cancelEditRound: () => void;
 
+  // Settings (allowed any time during active game)
+  updateSettings: (settings: GameSettings) => void;
+
   // Renaming (allowed any time during active game)
   renamePlayer: (playerId: string, newName: string) => void;
   renameTeam: (teamId: string, newName: string) => void;
@@ -65,6 +72,13 @@ interface GameStore {
   // History
   deleteHistory: (gameId: string) => void;
   clearAllHistory: () => void;
+  restoreDeletedGame: (gameId: string) => void;
+  permanentlyDeleteGame: (gameId: string) => void;
+  clearDeletedGames: () => void;
+
+  // Player stats
+  deletePlayerStats: (key: string) => void;
+  clearAllPlayerStats: () => void;
 
   // Settings
   toggleDarkMode: () => void;
@@ -76,6 +90,7 @@ export const useGameStore = create<GameStore>()(
       currentGame: null,
       savedGames: [],
       completedGames: [],
+      deletedGames: [],
       playerStats: {},
       darkMode: true, // default to dark mode for card game feel
       editingRoundNumber: null,
@@ -171,6 +186,59 @@ export const useGameStore = create<GameStore>()(
           ],
           game.settings
         );
+      },
+
+      endGameEarly: () => {
+        const game = get().currentGame;
+        if (!game) return;
+
+        const completedRounds = game.rounds.filter(r => r.isComplete);
+        if (completedRounds.length === 0) {
+          // No completed rounds — just abandon
+          set({ currentGame: null, editingRoundNumber: null, editSnapshot: null });
+          return;
+        }
+
+        const lastRound = completedRounds[completedRounds.length - 1];
+        // Determine winner by highest cumulative score
+        let winnerId: string | undefined;
+        if (lastRound.teamScores.length === 2) {
+          const [a, b] = lastRound.teamScores;
+          if (a.cumulativeScore !== b.cumulativeScore) {
+            winnerId = a.cumulativeScore > b.cumulativeScore ? a.teamId : b.teamId;
+          }
+        }
+
+        const finalGame: Game = {
+          ...game,
+          rounds: game.rounds.filter(r => r.isComplete),
+          phase: 'complete' as GamePhase,
+          completedAt: new Date().toISOString(),
+          winnerId,
+        };
+
+        // Update player win/loss stats
+        const newPlayerStats = { ...get().playerStats };
+        finalGame.players.forEach(p => {
+          const key = p.name.toLowerCase().trim();
+          const existing = newPlayerStats[key] ?? { name: p.name, wins: 0, losses: 0, gamesPlayed: 0 };
+          const won = winnerId ? finalGame.teams[p.teamIndex].id === winnerId : false;
+          newPlayerStats[key] = {
+            ...existing,
+            name: p.name,
+            wins: existing.wins + (won ? 1 : 0),
+            losses: existing.losses + (won ? 0 : 1),
+            gamesPlayed: existing.gamesPlayed + 1,
+          };
+        });
+
+        set({
+          currentGame: finalGame,
+          completedGames: [finalGame, ...get().completedGames],
+          playerStats: newPlayerStats,
+          editingRoundNumber: null,
+          editSnapshot: null,
+        });
       },
 
       submitBids: (bids) => {
@@ -346,6 +414,26 @@ export const useGameStore = create<GameStore>()(
           phase: game.phase,
         };
 
+        // If the game was complete, revert player stats and remove from completedGames
+        let updatedPlayerStats = get().playerStats;
+        let updatedCompletedGames = get().completedGames;
+        if (game.phase === 'complete') {
+          updatedPlayerStats = { ...updatedPlayerStats };
+          game.players.forEach(p => {
+            const key = p.name.toLowerCase().trim();
+            const existing = updatedPlayerStats[key];
+            if (!existing) return;
+            const won = game.teams[p.teamIndex].id === game.winnerId;
+            updatedPlayerStats[key] = {
+              ...existing,
+              wins: existing.wins - (won ? 1 : 0),
+              losses: existing.losses - (won ? 0 : 1),
+              gamesPlayed: existing.gamesPlayed - 1,
+            };
+          });
+          updatedCompletedGames = updatedCompletedGames.filter(g => g.id !== game.id);
+        }
+
         // Mark the target round as incomplete so it can be re-edited
         // Remove any existing incomplete round (current new round in progress)
         // but keep all completed rounds intact
@@ -360,11 +448,15 @@ export const useGameStore = create<GameStore>()(
         set({
           editingRoundNumber: roundNumber,
           editSnapshot: snapshot,
+          playerStats: updatedPlayerStats,
+          completedGames: updatedCompletedGames,
           currentGame: {
             ...game,
             rounds: updatedRounds,
             currentRound: roundNumber,
             phase: 'bidding' as GamePhase,
+            completedAt: undefined,
+            winnerId: undefined,
           },
         });
       },
@@ -374,16 +466,44 @@ export const useGameStore = create<GameStore>()(
         const snapshot = get().editSnapshot;
         if (!game || !snapshot) return;
 
-        // Restore the game to its pre-edit state
+        const restoredGame: Game = {
+          ...game,
+          rounds: snapshot.rounds,
+          currentRound: snapshot.currentRound,
+          phase: snapshot.phase,
+        };
+
+        // If we were editing a completed game, restore stats and completedGames
+        let updatedPlayerStats = get().playerStats;
+        let updatedCompletedGames = get().completedGames;
+        if (snapshot.phase === 'complete') {
+          // Re-determine winner from the snapshot rounds
+          const { isOver, winnerId } = checkGameOver({ ...restoredGame, rounds: snapshot.rounds });
+          restoredGame.winnerId = winnerId;
+          restoredGame.completedAt = restoredGame.completedAt || new Date().toISOString();
+
+          updatedPlayerStats = { ...updatedPlayerStats };
+          game.players.forEach(p => {
+            const key = p.name.toLowerCase().trim();
+            const existing = updatedPlayerStats[key] ?? { name: p.name, wins: 0, losses: 0, gamesPlayed: 0 };
+            const won = game.teams[p.teamIndex].id === winnerId;
+            updatedPlayerStats[key] = {
+              ...existing,
+              name: p.name,
+              wins: existing.wins + (won ? 1 : 0),
+              losses: existing.losses + (won ? 0 : 1),
+              gamesPlayed: existing.gamesPlayed + 1,
+            };
+          });
+          updatedCompletedGames = [restoredGame, ...updatedCompletedGames];
+        }
+
         set({
           editingRoundNumber: null,
           editSnapshot: null,
-          currentGame: {
-            ...game,
-            rounds: snapshot.rounds,
-            currentRound: snapshot.currentRound,
-            phase: snapshot.phase,
-          },
+          playerStats: updatedPlayerStats,
+          completedGames: updatedCompletedGames,
+          currentGame: restoredGame,
         });
       },
 
@@ -391,13 +511,19 @@ export const useGameStore = create<GameStore>()(
         const game = get().currentGame;
         if (!game || game.phase !== 'scoring') return;
 
+        // currentRound was already advanced by submitTricks — just switch phase
         set({
           currentGame: {
             ...game,
             phase: 'bidding' as GamePhase,
-            currentRound: game.currentRound + 1,
           },
         });
+      },
+
+      updateSettings: (settings) => {
+        const game = get().currentGame;
+        if (!game) return;
+        set({ currentGame: { ...game, settings } });
       },
 
       renamePlayer: (playerId, newName) => {
@@ -429,13 +555,47 @@ export const useGameStore = create<GameStore>()(
       },
 
       deleteHistory: (gameId) => {
+        const game = get().completedGames.find(g => g.id === gameId);
         set({
           completedGames: get().completedGames.filter(g => g.id !== gameId),
+          deletedGames: game ? [game, ...get().deletedGames] : get().deletedGames,
         });
       },
 
       clearAllHistory: () => {
-        set({ completedGames: [] });
+        set({
+          deletedGames: [...get().completedGames, ...get().deletedGames],
+          completedGames: [],
+        });
+      },
+
+      restoreDeletedGame: (gameId) => {
+        const game = get().deletedGames.find(g => g.id === gameId);
+        if (!game) return;
+        set({
+          deletedGames: get().deletedGames.filter(g => g.id !== gameId),
+          completedGames: [game, ...get().completedGames],
+        });
+      },
+
+      permanentlyDeleteGame: (gameId) => {
+        set({
+          deletedGames: get().deletedGames.filter(g => g.id !== gameId),
+        });
+      },
+
+      clearDeletedGames: () => {
+        set({ deletedGames: [] });
+      },
+
+      deletePlayerStats: (key) => {
+        const updated = { ...get().playerStats };
+        delete updated[key];
+        set({ playerStats: updated });
+      },
+
+      clearAllPlayerStats: () => {
+        set({ playerStats: {} });
       },
 
       toggleDarkMode: () => {
