@@ -194,7 +194,7 @@ export default function AdminScreen() {
                 <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}>
                   Active Game
                 </Typography>
-                <GameDetailCard game={userDetail.currentGame} theme={theme} />
+                <GameDetailCard game={userDetail.currentGame}  />
               </Box>
             )}
 
@@ -205,7 +205,7 @@ export default function AdminScreen() {
                   Completed Games ({userDetail.completedGames.length})
                 </Typography>
                 {userDetail.completedGames.map(game => (
-                  <GameDetailCard key={game.id} game={game} theme={theme} />
+                  <GameDetailCard key={game.id} game={game}  />
                 ))}
               </Box>
             )}
@@ -217,7 +217,7 @@ export default function AdminScreen() {
                   Saved Games ({userDetail.savedGames.length})
                 </Typography>
                 {userDetail.savedGames.map(game => (
-                  <GameDetailCard key={game.id} game={game} theme={theme} />
+                  <GameDetailCard key={game.id} game={game}  />
                 ))}
               </Box>
             )}
@@ -359,7 +359,8 @@ export default function AdminScreen() {
 }
 
 // Expandable game detail card with scorecard
-function GameDetailCard({ game, theme }: { game: Game; theme: ReturnType<typeof useTheme> }) {
+function GameDetailCard({ game }: { game: Game }) {
+  const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
   const completedRounds = game.rounds.filter(r => r.isComplete);
   const lastRound = completedRounds[completedRounds.length - 1];
