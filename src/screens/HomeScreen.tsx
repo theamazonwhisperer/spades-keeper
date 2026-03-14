@@ -308,7 +308,19 @@ export default function HomeScreen() {
       <Typography
         variant="caption"
         color="text.disabled"
-        sx={{ textAlign: 'center', display: 'block', mt: 4, mb: 1, fontSize: '0.65rem' }}
+        sx={{
+          textAlign: 'center',
+          display: 'block',
+          mt: 4,
+          mb: 1,
+          fontSize: '0.65rem',
+          cursor: user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '') ? 'pointer' : 'default',
+        }}
+        onClick={() => {
+          if (user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '')) {
+            navigate('/admin');
+          }
+        }}
       >
         v2.0
       </Typography>

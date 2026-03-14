@@ -12,6 +12,7 @@ import HistoryScreen from './screens/HistoryScreen';
 import PlayerStatsScreen from './screens/PlayerStatsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WatchScreen from './screens/WatchScreen';
+import AdminScreen from './screens/AdminScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
 import InstallPrompt from './components/InstallPrompt';
 
@@ -96,6 +97,7 @@ export default function App() {
           <Route path="/history" element={<AuthGate><HistoryScreen /></AuthGate>} />
           <Route path="/stats" element={<AuthGate><PlayerStatsScreen /></AuthGate>} />
           <Route path="/settings" element={<AuthGate><SettingsScreen /></AuthGate>} />
+          <Route path="/admin" element={<AuthGate><AdminScreen /></AuthGate>} />
           <Route path="*" element={<AuthGate><Navigate to="/" replace /></AuthGate>} />
         </Routes>
         <InstallPrompt />
