@@ -16,7 +16,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import AddIcon from '@mui/icons-material/Add';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ShareIcon from '@mui/icons-material/Share';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { useGameStore } from '../../store/gameStore';
 import { formatScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
@@ -55,18 +55,28 @@ export default function GameOverView() {
     haptic('light');
     if (!scorecardRef.current) return;
 
+    let blob: Blob | null = null;
+
     try {
-      const canvas = await html2canvas(scorecardRef.current, {
+      // Add padding to the captured area
+      const el = scorecardRef.current;
+      const dataUrl = await toPng(el, {
         backgroundColor: theme.palette.mode === 'dark' ? '#0e1117' : '#f0f3f6',
-        scale: 2,
-        logging: false,
+        pixelRatio: 2,
+        style: {
+          padding: '16px',
+        },
       });
 
-      const blob = await new Promise<Blob | null>(resolve =>
-        canvas.toBlob(resolve, 'image/png')
-      );
+      const res = await fetch(dataUrl);
+      blob = await res.blob();
+    } catch {
+      // Image capture failed — fall through to text fallback
+    }
 
-      if (blob && navigator.share) {
+    if (blob) {
+      // Try native share with image
+      if (navigator.share) {
         const file = new File([blob], 'spades-scorecard.png', { type: 'image/png' });
         try {
           await navigator.share({
@@ -76,34 +86,33 @@ export default function GameOverView() {
           });
           return;
         } catch {
-          // Fall through to download
+          // User cancelled or share failed — fall through to download
         }
       }
 
       // Fallback: download the image
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'spades-scorecard.png';
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-    } catch {
-      // Final fallback: share as text
-      const scores = lastRound?.teamScores ?? [];
-      const text = [
-        `♠ SpadesKeeper`,
-        `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
-        ...scores.map(ts => {
-          const team = currentGame.teams.find(t => t.id === ts.teamId);
-          const flag = ts.teamId === currentGame.winnerId ? ' 🏆' : '';
-          return `${team?.name}: ${ts.cumulativeScore}${flag}`;
-        }),
-        winner ? `${winner.name} wins!` : `Game over`,
-      ].join('\n');
-      try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'spades-scorecard.png';
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
     }
+
+    // Final fallback: share as text
+    const scores = lastRound?.teamScores ?? [];
+    const text = [
+      `♠ SpadesKeeper`,
+      `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
+      ...scores.map(ts => {
+        const team = currentGame.teams.find(t => t.id === ts.teamId);
+        const flag = ts.teamId === currentGame.winnerId ? ' 🏆' : '';
+        return `${team?.name}: ${ts.cumulativeScore}${flag}`;
+      }),
+      winner ? `${winner.name} wins!` : `Game over`,
+    ].join('\n');
+    try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
   };
 
   return (
