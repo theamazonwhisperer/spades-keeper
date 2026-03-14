@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -15,6 +16,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import AddIcon from '@mui/icons-material/Add';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ShareIcon from '@mui/icons-material/Share';
+import html2canvas from 'html2canvas';
 import { useGameStore } from '../../store/gameStore';
 import { formatScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
@@ -25,6 +27,7 @@ export default function GameOverView() {
   const navigate = useNavigate();
   const theme = useTheme();
   const { currentGame, abandonGame, rematch, editRound } = useGameStore();
+  const scorecardRef = useRef<HTMLDivElement>(null);
 
   if (!currentGame) return null;
 
@@ -50,34 +53,56 @@ export default function GameOverView() {
 
   const handleShare = async () => {
     haptic('light');
-    const scores = lastRound?.teamScores ?? [];
-    const lines = [
-      `♠ SpadesKeeper`,
-      `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
-      `${completedRounds.length} round${completedRounds.length !== 1 ? 's' : ''}`,
-      ``,
-      ...scores.map(ts => {
-        const team = currentGame.teams.find(t => t.id === ts.teamId);
-        const flag = ts.teamId === currentGame.winnerId ? ' 🏆' : '';
-        return `${team?.name}: ${ts.cumulativeScore}${flag}`;
-      }),
-      ``,
-      winner ? `${winner.name} wins!` : `Game over`,
-    ];
-    const text = lines.join('\n');
+    if (!scorecardRef.current) return;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'SpadesKeeper', text });
-        return;
-      } catch {
-        // Fall through to clipboard
-      }
-    }
     try {
-      await navigator.clipboard.writeText(text);
+      const canvas = await html2canvas(scorecardRef.current, {
+        backgroundColor: theme.palette.mode === 'dark' ? '#0e1117' : '#f0f3f6',
+        scale: 2,
+        logging: false,
+      });
+
+      const blob = await new Promise<Blob | null>(resolve =>
+        canvas.toBlob(resolve, 'image/png')
+      );
+
+      if (blob && navigator.share) {
+        const file = new File([blob], 'spades-scorecard.png', { type: 'image/png' });
+        try {
+          await navigator.share({
+            title: 'SpadesKeeper',
+            text: winner ? `${winner.name} wins!` : 'Game over!',
+            files: [file],
+          });
+          return;
+        } catch {
+          // Fall through to download
+        }
+      }
+
+      // Fallback: download the image
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'spades-scorecard.png';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch {
-      // Clipboard also unavailable — silently ignore
+      // Final fallback: share as text
+      const scores = lastRound?.teamScores ?? [];
+      const text = [
+        `♠ SpadesKeeper`,
+        `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
+        ...scores.map(ts => {
+          const team = currentGame.teams.find(t => t.id === ts.teamId);
+          const flag = ts.teamId === currentGame.winnerId ? ' 🏆' : '';
+          return `${team?.name}: ${ts.cumulativeScore}${flag}`;
+        }),
+        winner ? `${winner.name} wins!` : `Game over`,
+      ].join('\n');
+      try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
     }
   };
 
@@ -93,6 +118,8 @@ export default function GameOverView() {
         px: 2.5,
       }}
     >
+      {/* Shareable scorecard area */}
+      <Box ref={scorecardRef}>
       {/* Trophy hero */}
       <Box className="animate-scale-in" sx={{ textAlign: 'center', pt: { xs: 6, sm: 8 }, pb: 3 }}>
         <Box sx={{ fontSize: '4.5rem', mb: 1, filter: 'drop-shadow(0 4px 12px rgba(245, 166, 35, 0.3))' }}>
@@ -191,6 +218,7 @@ export default function GameOverView() {
           <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
         </CardContent>
       </Card>
+      </Box>{/* end scorecardRef */}
 
       {/* Round-by-round breakdown */}
       <Card sx={{ mb: 3 }}>
