@@ -24,6 +24,7 @@ import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
+import EndGameDialog from '../../components/EndGameDialog';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
 
@@ -130,6 +131,7 @@ export default function TricksView() {
               Assign all 13 tricks
             </Typography>
           </Box>
+          {!editingRoundNumber && <EndGameDialog />}
           <Button
             startIcon={<EditIcon />}
             size="small"

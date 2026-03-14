@@ -23,6 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { formatScore } from '../../utils/scoring';
 import RenameDialog from '../../components/RenameDialog';
+import EndGameDialog from '../../components/EndGameDialog';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
@@ -49,6 +50,7 @@ export default function ScoringView() {
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6">Round {latestRound.roundNumber} · Results</Typography>
           </Box>
+          <EndGameDialog />
           <Button
             startIcon={<UndoIcon />}
             size="small"

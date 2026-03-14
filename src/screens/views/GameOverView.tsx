@@ -24,7 +24,7 @@ import { haptic } from '../../utils/haptic';
 export default function GameOverView() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { currentGame, abandonGame, rematch } = useGameStore();
+  const { currentGame, abandonGame, rematch, editRound } = useGameStore();
 
   if (!currentGame) return null;
 
@@ -182,10 +182,13 @@ export default function GameOverView() {
       {/* Full scorecard */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.25, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}>
             Full Scorecard
           </Typography>
-          <ScoreHistoryTable game={currentGame} />
+          <Typography variant="caption" color="text.disabled" sx={{ mb: 1, display: 'block' }}>
+            Tap a round to edit it
+          </Typography>
+          <ScoreHistoryTable game={currentGame} onEditRound={editRound} />
         </CardContent>
       </Card>
 
