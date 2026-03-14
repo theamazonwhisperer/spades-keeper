@@ -309,6 +309,11 @@ function GameCard({ game, onClick, active }: { game: Game; onClick: () => void; 
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
               {game.teams[0].name} vs {game.teams[1].name}
             </Typography>
+            <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', display: 'block', lineHeight: 1.3 }}>
+              {game.players.filter(p => p.teamIndex === 0).map(p => p.name).join(' & ')}
+              {' vs '}
+              {game.players.filter(p => p.teamIndex === 1).map(p => p.name).join(' & ')}
+            </Typography>
             <Typography variant="caption" color="text.secondary">
               Round {game.currentRound} · {game.phase === 'bidding' ? 'Bidding' : game.phase === 'tricks' ? 'Tricks' : game.phase === 'scoring' ? 'Scoring' : 'Complete'}
             </Typography>
