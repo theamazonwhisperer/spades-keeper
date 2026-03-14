@@ -25,6 +25,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import RestoreIcon from '@mui/icons-material/Restore';
+import PeopleIcon from '@mui/icons-material/People';
 import { useGameStore } from '../store/gameStore';
 import ScoreHistoryTable from '../components/ScoreHistoryTable';
 import { monoFont } from '../theme';
@@ -103,6 +104,15 @@ export default function HistoryScreen() {
                               size="small"
                               color="primary"
                               sx={{ fontWeight: 700 }}
+                            />
+                          )}
+                          {game.sharedBy && (
+                            <Chip
+                              icon={<PeopleIcon sx={{ fontSize: '14px !important' }} />}
+                              label={`From ${game.sharedBy}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontWeight: 500, fontSize: '0.65rem' }}
                             />
                           )}
                         </Box>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -16,11 +16,19 @@ import {
   Chip,
   useTheme,
   alpha,
+  CircularProgress,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import PendingIcon from '@mui/icons-material/Pending';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useGameStore } from '../store/gameStore';
-import { GameSettings } from '../types';
+import { useAuthStore } from '../store/authStore';
+import { getMyPlayerLinks, getPendingLinkRequests, acceptPlayerLink, declinePlayerLink, deletePlayerLink } from '../lib/cloudSync';
+import { GameSettings, PlayerLink } from '../types';
+import LinkPlayerDialog from '../components/LinkPlayerDialog';
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
@@ -32,8 +40,47 @@ export default function SettingsScreen() {
     defaultSettings,
     updateDefaultSettings,
   } = useGameStore();
+  const user = useAuthStore(s => s.user);
 
   const [newName, setNewName] = useState('');
+  const [linkDialogName, setLinkDialogName] = useState<string | null>(null);
+  const [playerLinks, setPlayerLinks] = useState<PlayerLink[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<(PlayerLink & { ownerDisplayName: string })[]>([]);
+  const [loadingLinks, setLoadingLinks] = useState(false);
+
+  const loadLinks = async () => {
+    if (!user) return;
+    setLoadingLinks(true);
+    const [links, requests] = await Promise.all([
+      getMyPlayerLinks(user.id),
+      getPendingLinkRequests(user.id),
+    ]);
+    setPlayerLinks(links);
+    setPendingRequests(requests);
+    setLoadingLinks(false);
+  };
+
+  useEffect(() => {
+    loadLinks();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const getLinkForPlayer = (name: string) =>
+    playerLinks.find(l => l.playerName.toLowerCase() === name.toLowerCase());
+
+  const handleAcceptRequest = async (linkId: string) => {
+    await acceptPlayerLink(linkId);
+    loadLinks();
+  };
+
+  const handleDeclineRequest = async (linkId: string) => {
+    await declinePlayerLink(linkId);
+    loadLinks();
+  };
+
+  const handleUnlink = async (linkId: string) => {
+    await deletePlayerLink(linkId);
+    loadLinks();
+  };
 
   const handleAddName = () => {
     const trimmed = newName.trim();
@@ -100,19 +147,100 @@ export default function SettingsScreen() {
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                {savedPlayerNames.map(name => (
-                  <Chip
-                    key={name}
-                    label={name}
-                    onDelete={() => removeSavedPlayerName(name)}
-                    size="small"
-                    variant="outlined"
-                  />
-                ))}
+                {savedPlayerNames.map(name => {
+                  const link = getLinkForPlayer(name);
+                  const linkIcon = link
+                    ? link.status === 'confirmed'
+                      ? <CheckCircleIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                      : <PendingIcon sx={{ fontSize: 14, color: 'warning.main' }} />
+                    : undefined;
+
+                  return (
+                    <Chip
+                      key={name}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {name}
+                          {linkIcon}
+                        </Box>
+                      }
+                      onDelete={() => removeSavedPlayerName(name)}
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        if (user && !link) {
+                          setLinkDialogName(name);
+                        } else if (link) {
+                          handleUnlink(link.id);
+                        }
+                      }}
+                      icon={user ? (link ? <LinkOffIcon /> : <LinkIcon />) : undefined}
+                      sx={{
+                        cursor: user ? 'pointer' : 'default',
+                        borderColor: link?.status === 'confirmed'
+                          ? alpha(theme.palette.success.main, 0.4)
+                          : link?.status === 'pending'
+                            ? alpha(theme.palette.warning.main, 0.4)
+                            : undefined,
+                      }}
+                    />
+                  );
+                })}
               </Box>
+            )}
+            {user && (
+              <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
+                Tap a player to link/unlink their account by email
+              </Typography>
             )}
           </CardContent>
         </Card>
+
+        {/* Pending Link Requests */}
+        {pendingRequests.length > 0 && (
+          <>
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
+            >
+              Link Requests
+            </Typography>
+            <Card sx={{ mb: 3, border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}` }}>
+              <CardContent sx={{ p: 2 }}>
+                {pendingRequests.map(req => (
+                  <Box
+                    key={req.id}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      py: 1,
+                      '&:not(:last-child)': { borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` },
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {req.ownerDisplayName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        wants to link you as "{req.playerName}"
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Button size="small" variant="contained" color="success" onClick={() => handleAcceptRequest(req.id)}>
+                        Accept
+                      </Button>
+                      <Button size="small" variant="outlined" color="error" onClick={() => handleDeclineRequest(req.id)}>
+                        Decline
+                      </Button>
+                    </Box>
+                  </Box>
+                ))}
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         <Divider sx={{ my: 2 }} />
 
@@ -241,6 +369,15 @@ export default function SettingsScreen() {
           Reset to Factory Defaults
         </Button>
       </Box>
+
+      {linkDialogName && (
+        <LinkPlayerDialog
+          open={!!linkDialogName}
+          onClose={() => setLinkDialogName(null)}
+          playerName={linkDialogName}
+          onLinked={() => { setLinkDialogName(null); loadLinks(); }}
+        />
+      )}
     </Box>
   );
 }

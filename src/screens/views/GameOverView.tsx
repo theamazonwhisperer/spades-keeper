@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -10,13 +10,16 @@ import {
   useTheme,
   alpha,
   Divider,
+  Snackbar,
 } from '@mui/material';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import HomeIcon from '@mui/icons-material/Home';
 import AddIcon from '@mui/icons-material/Add';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ShareIcon from '@mui/icons-material/Share';
+import LinkIcon from '@mui/icons-material/Link';
 import { useGameStore } from '../../store/gameStore';
+import { useAuthStore } from '../../store/authStore';
 import { formatScore } from '../../utils/scoring';
 import { shareScorecard } from '../../utils/shareScorecard';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
@@ -27,7 +30,9 @@ export default function GameOverView() {
   const navigate = useNavigate();
   const theme = useTheme();
   const { currentGame, abandonGame, rematch, editRound } = useGameStore();
+  const user = useAuthStore(s => s.user);
   const scorecardRef = useRef<HTMLDivElement>(null);
+  const [snackMsg, setSnackMsg] = useState('');
 
   if (!currentGame) return null;
 
@@ -49,6 +54,21 @@ export default function GameOverView() {
 
   const handleHome = () => {
     navigate('/');
+  };
+
+  const handleShareLink = async () => {
+    if (!user || !currentGame) {
+      setSnackMsg('Sign in to share a game link');
+      return;
+    }
+    const url = `${window.location.origin}/import-game/${user.id}/${currentGame.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setSnackMsg('Game link copied!');
+    } catch {
+      setSnackMsg(url);
+    }
+    haptic('light');
   };
 
   const handleShare = async () => {
@@ -269,6 +289,18 @@ export default function GameOverView() {
           variant="outlined"
           size="large"
           fullWidth
+          startIcon={<LinkIcon />}
+          onClick={handleShareLink}
+          sx={{ py: 1.6, minHeight: 56 }}
+        >
+          Game Link
+        </Button>
+      </Box>
+      <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+        <Button
+          variant="outlined"
+          size="large"
+          fullWidth
           startIcon={<AddIcon />}
           onClick={handleNewGame}
           sx={{ py: 1.6, minHeight: 56 }}
@@ -286,6 +318,12 @@ export default function GameOverView() {
       >
         Home
       </Button>
+      <Snackbar
+        open={!!snackMsg}
+        autoHideDuration={3000}
+        onClose={() => setSnackMsg('')}
+        message={snackMsg}
+      />
     </Box>
   );
 }

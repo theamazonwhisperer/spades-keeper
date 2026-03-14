@@ -19,6 +19,8 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useGameStore } from '../store/gameStore';
+import { useAuthStore } from '../store/authStore';
+import { getConfirmedLinksForNames } from '../lib/cloudSync';
 import { GameSettings } from '../types';
 
 export default function SetupScreen() {
@@ -43,7 +45,9 @@ export default function SetupScreen() {
   const canStart =
     teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim();
 
-  const handleStart = () => {
+  const user = useAuthStore(s => s.user);
+
+  const handleStart = async () => {
     if (!canStart) return;
     const settings: GameSettings = {
       winTarget,
@@ -53,13 +57,22 @@ export default function SetupScreen() {
       doubleOn10,
       failedNilCountsAsBags,
     };
+
+    // Look up confirmed player links for auto-linking
+    let linkedUserMap: Map<string, string> | undefined;
+    if (user) {
+      const names = [p1.trim(), p2.trim(), p3.trim(), p4.trim()];
+      linkedUserMap = await getConfirmedLinksForNames(user.id, names);
+    }
+
     startGame(
       [teamName1.trim(), teamName2.trim()],
       [
         [p1.trim(), p2.trim()],
         [p3.trim(), p4.trim()],
       ],
-      settings
+      settings,
+      linkedUserMap
     );
     navigate('/game');
   };

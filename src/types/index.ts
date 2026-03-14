@@ -5,6 +5,7 @@ export interface Player {
   name: string;
   teamIndex: 0 | 1;
   playerIndex: 0 | 1;
+  linkedUserId?: string; // Supabase user ID if this player is a linked account
 }
 
 export interface Team {
@@ -78,4 +79,20 @@ export interface Game {
   phase: GamePhase;
   currentRound: number; // 1-based
   winnerId?: string;
+  sharedBy?: string; // display name of user who shared this game
+}
+
+export interface PlayerLink {
+  id: string;
+  playerName: string;
+  linkedEmail: string;
+  linkedUserId?: string;
+  status: 'pending' | 'confirmed';
+}
+
+export interface UserProfile {
+  userId: string;
+  email: string;
+  displayName?: string;
+  discoverable: boolean;
 }

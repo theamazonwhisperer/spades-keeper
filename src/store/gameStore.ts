@@ -12,6 +12,8 @@ import {
   NilType,
 } from '../types';
 import { calculateRoundScores, checkGameOver } from '../utils/scoring';
+import { shareGameWithLinkedPlayers, getUserProfile } from '../lib/cloudSync';
+import { useAuthStore } from './authStore';
 
 interface BidInput {
   playerId: string;
@@ -44,7 +46,8 @@ interface GameStore {
   startGame: (
     teamNames: [string, string],
     playerNames: [[string, string], [string, string]],
-    settings: GameSettings
+    settings: GameSettings,
+    linkedUserMap?: Map<string, string>
   ) => void;
   abandonGame: () => void;
   saveAndNewGame: () => void;  // save current game, go to setup
@@ -81,6 +84,9 @@ interface GameStore {
   permanentlyDeleteGame: (gameId: string) => void;
   clearDeletedGames: () => void;
 
+  // Import shared game
+  importGame: (game: Game) => void;
+
   // Player stats
   deletePlayerStats: (key: string) => void;
   clearAllPlayerStats: () => void;
@@ -92,6 +98,22 @@ interface GameStore {
   // Settings
   updateDefaultSettings: (settings: GameSettings) => void;
   toggleDarkMode: () => void;
+}
+
+/** Fire-and-forget: share completed game with linked players */
+function autoShareWithLinkedPlayers(game: Game) {
+  const hasLinkedPlayers = game.players.some(p => p.linkedUserId);
+  if (!hasLinkedPlayers) return;
+
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+
+  getUserProfile(user.id).then(profile => {
+    const displayName = profile?.displayName || user.email || 'Someone';
+    shareGameWithLinkedPlayers(user.id, game, displayName).catch(e =>
+      console.error('Failed to auto-share game:', e)
+    );
+  });
 }
 
 export const useGameStore = create<GameStore>()(
@@ -115,17 +137,25 @@ export const useGameStore = create<GameStore>()(
       editingRoundNumber: null,
       editSnapshot: null,
 
-      startGame: (teamNames, playerNames, settings) => {
+      startGame: (teamNames, playerNames, settings, linkedUserMap) => {
         const teams = [
           { id: uuidv4(), name: teamNames[0] },
           { id: uuidv4(), name: teamNames[1] },
         ];
 
+        const makePlayer = (name: string, teamIndex: 0 | 1, playerIndex: 0 | 1): Player => ({
+          id: uuidv4(),
+          name,
+          teamIndex,
+          playerIndex,
+          ...(linkedUserMap?.get(name) ? { linkedUserId: linkedUserMap.get(name) } : {}),
+        });
+
         const players: Player[] = [
-          { id: uuidv4(), name: playerNames[0][0], teamIndex: 0, playerIndex: 0 },
-          { id: uuidv4(), name: playerNames[0][1], teamIndex: 0, playerIndex: 1 },
-          { id: uuidv4(), name: playerNames[1][0], teamIndex: 1, playerIndex: 0 },
-          { id: uuidv4(), name: playerNames[1][1], teamIndex: 1, playerIndex: 1 },
+          makePlayer(playerNames[0][0], 0, 0),
+          makePlayer(playerNames[0][1], 0, 1),
+          makePlayer(playerNames[1][0], 1, 0),
+          makePlayer(playerNames[1][1], 1, 1),
         ];
 
         const fullSettings: GameSettings = {
@@ -270,6 +300,7 @@ export const useGameStore = create<GameStore>()(
           editingRoundNumber: null,
           editSnapshot: null,
         });
+        autoShareWithLinkedPlayers(finalGame);
       },
 
       submitBids: (bids) => {
@@ -400,6 +431,7 @@ export const useGameStore = create<GameStore>()(
             editingRoundNumber: null,
             editSnapshot: null,
           });
+          autoShareWithLinkedPlayers(finalGame);
         } else {
           set({ currentGame: updatedGame, editingRoundNumber: null, editSnapshot: null });
         }
@@ -630,6 +662,13 @@ export const useGameStore = create<GameStore>()(
 
       clearDeletedGames: () => {
         set({ deletedGames: [] });
+      },
+
+      importGame: (game) => {
+        const existing = get().completedGames;
+        // Deduplicate by game.id
+        if (existing.some(g => g.id === game.id)) return;
+        set({ completedGames: [game, ...existing] });
       },
 
       deletePlayerStats: (key) => {

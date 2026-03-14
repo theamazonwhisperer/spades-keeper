@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { upsertUserProfile } from '../lib/cloudSync';
 
 interface AuthStore {
   user: User | null;
@@ -33,6 +34,7 @@ export const useAuthStore = create<AuthStore>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           set({ user: session.user, isGuest: false, loading: false });
+          upsertUserProfile(session.user);
         } else {
           set({ loading: false });
         }
@@ -42,6 +44,7 @@ export const useAuthStore = create<AuthStore>()(
           if (session?.user) {
             // Clear guest flag when user signs in
             set({ user: session.user, isGuest: false });
+            upsertUserProfile(session.user);
           } else {
             set({ user: null });
           }
