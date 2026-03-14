@@ -32,14 +32,19 @@ export const useAuthStore = create<AuthStore>()(
         // Check for existing Supabase session
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          set({ user: session.user, loading: false });
+          set({ user: session.user, isGuest: false, loading: false });
         } else {
           set({ loading: false });
         }
 
         // Listen for auth state changes (e.g. OAuth redirect back)
         supabase.auth.onAuthStateChange((_event, session) => {
-          set({ user: session?.user ?? null });
+          if (session?.user) {
+            // Clear guest flag when user signs in
+            set({ user: session.user, isGuest: false });
+          } else {
+            set({ user: null });
+          }
         });
       },
 

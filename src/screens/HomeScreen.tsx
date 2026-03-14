@@ -322,7 +322,7 @@ export default function HomeScreen() {
         color="text.disabled"
         sx={{ textAlign: 'center', display: 'block', mt: 4, mb: 1, fontSize: '0.65rem' }}
       >
-        v2.0
+        v2.1
       </Typography>
 
     </Box>
