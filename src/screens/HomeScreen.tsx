@@ -21,11 +21,14 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SettingsIcon from '@mui/icons-material/Settings';
+import ScienceIcon from '@mui/icons-material/Science';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import GoogleIcon from '@mui/icons-material/Google';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
 import { getLatestTeamScore } from '../utils/scoring';
+import { loadDemoGame } from '../utils/demoData';
 import { monoFont } from '../theme';
 import { Game } from '../types';
 
@@ -76,6 +79,28 @@ export default function HomeScreen() {
         }}
       >
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          {!currentGame && (
+            <Tooltip title="Load Demo Game">
+              <IconButton
+                onClick={() => { loadDemoGame(); navigate('/game'); }}
+                color="primary"
+                sx={{ width: 44, height: 44 }}
+              >
+                <ScienceIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          {user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '') && (
+            <Tooltip title="Admin">
+              <IconButton
+                onClick={() => navigate('/admin')}
+                color="warning"
+                sx={{ width: 44, height: 44 }}
+              >
+                <AdminPanelSettingsIcon />
+              </IconButton>
+            </Tooltip>
+          )}
           {user && (
             <Tooltip title={`Signed in as ${user.email}`}>
               <Box
