@@ -21,6 +21,7 @@ import ScienceIcon from '@mui/icons-material/Science';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SettingsIcon from '@mui/icons-material/Settings';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import GoogleIcon from '@mui/icons-material/Google';
@@ -156,6 +157,17 @@ export default function HomeScreen() {
               <SettingsIcon />
             </IconButton>
           </Tooltip>
+          {user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '') && (
+            <Tooltip title="Admin">
+              <IconButton
+                onClick={() => navigate('/admin')}
+                color="error"
+                sx={{ width: 48, height: 48 }}
+              >
+                <AdminPanelSettingsIcon />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title={darkMode ? 'Light Mode' : 'Dark Mode'}>
             <IconButton
               onClick={toggleDarkMode}
@@ -308,19 +320,7 @@ export default function HomeScreen() {
       <Typography
         variant="caption"
         color="text.disabled"
-        sx={{
-          textAlign: 'center',
-          display: 'block',
-          mt: 4,
-          mb: 1,
-          fontSize: '0.65rem',
-          cursor: user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '') ? 'pointer' : 'default',
-        }}
-        onClick={() => {
-          if (user && ['alexpaynter26@gmail.com', 'alex@theamazonwhisperer.com'].includes(user.email ?? '')) {
-            navigate('/admin');
-          }
-        }}
+        sx={{ textAlign: 'center', display: 'block', mt: 4, mb: 1, fontSize: '0.65rem' }}
       >
         v2.0
       </Typography>
