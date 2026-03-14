@@ -16,9 +16,9 @@ import HomeIcon from '@mui/icons-material/Home';
 import AddIcon from '@mui/icons-material/Add';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ShareIcon from '@mui/icons-material/Share';
-import { toPng } from 'html-to-image';
 import { useGameStore } from '../../store/gameStore';
 import { formatScore } from '../../utils/scoring';
+import { shareScorecard } from '../../utils/shareScorecard';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
@@ -52,77 +52,10 @@ export default function GameOverView() {
   };
 
   const handleShare = async () => {
-    haptic('light');
     if (!scorecardRef.current) return;
 
-    let blob: Blob | null = null;
-
-    try {
-      const el = scorecardRef.current;
-
-      // Temporarily force the element to render at full size for capture
-      // (prevents clipping from page scroll / viewport)
-      const prevOverflow = el.style.overflow;
-      const prevHeight = el.style.height;
-      const prevPosition = el.style.position;
-      el.style.overflow = 'visible';
-      el.style.height = 'auto';
-      el.style.position = 'relative';
-
-      // Scroll to top to avoid offset issues
-      window.scrollTo(0, 0);
-
-      // Small delay to let browser re-layout
-      await new Promise(r => setTimeout(r, 100));
-
-      const dataUrl = await toPng(el, {
-        backgroundColor: theme.palette.mode === 'dark' ? '#0e1117' : '#f0f3f6',
-        pixelRatio: 2,
-        style: {
-          padding: '16px',
-        },
-      });
-
-      // Restore original styles
-      el.style.overflow = prevOverflow;
-      el.style.height = prevHeight;
-      el.style.position = prevPosition;
-
-      const res = await fetch(dataUrl);
-      blob = await res.blob();
-    } catch {
-      // Image capture failed — fall through to text fallback
-    }
-
-    if (blob) {
-      // Try native share with image
-      if (navigator.share) {
-        const file = new File([blob], 'spades-scorecard.png', { type: 'image/png' });
-        try {
-          await navigator.share({
-            title: 'SpadesKeeper',
-            text: winner ? `${winner.name} wins!` : 'Game over!',
-            files: [file],
-          });
-          return;
-        } catch {
-          // User cancelled or share failed — fall through to download
-        }
-      }
-
-      // Fallback: download the image
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'spades-scorecard.png';
-      a.click();
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    // Final fallback: share as text
     const scores = lastRound?.teamScores ?? [];
-    const text = [
+    const fallback = [
       `♠ SpadesKeeper`,
       `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
       ...scores.map(ts => {
@@ -132,7 +65,13 @@ export default function GameOverView() {
       }),
       winner ? `${winner.name} wins!` : `Game over`,
     ].join('\n');
-    try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
+
+    await shareScorecard({
+      element: scorecardRef.current,
+      isDark: theme.palette.mode === 'dark',
+      text: winner ? `${winner.name} wins!` : 'Game over!',
+      fallbackText: fallback,
+    });
   };
 
   return (

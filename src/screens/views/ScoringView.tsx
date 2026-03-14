@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -19,9 +19,11 @@ import UndoIcon from '@mui/icons-material/Undo';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import HomeIcon from '@mui/icons-material/Home';
+import ShareIcon from '@mui/icons-material/Share';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { formatScore } from '../../utils/scoring';
+import { shareScorecard } from '../../utils/shareScorecard';
 import RenameDialog from '../../components/RenameDialog';
 import EndGameDialog from '../../components/EndGameDialog';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
@@ -33,6 +35,7 @@ export default function ScoringView() {
   const navigate = useNavigate();
   const { currentGame, startNextRound, undoLastRound, editRound } = useGameStore();
   const [renameOpen, setRenameOpen] = useState(false);
+  const scorecardRef = useRef<HTMLDivElement>(null);
 
   if (!currentGame) return null;
 
@@ -51,6 +54,29 @@ export default function ScoringView() {
             <Typography variant="h6">Round {latestRound.roundNumber} · Results</Typography>
           </Box>
           <EndGameDialog />
+          <IconButton
+            onClick={() => {
+              if (!scorecardRef.current || !currentGame) return;
+              const ts = latestRound.teamScores;
+              const fallback = [
+                `♠ SpadesKeeper · Round ${latestRound.roundNumber}`,
+                ...ts.map(s => {
+                  const t = currentGame.teams.find(t2 => t2.id === s.teamId);
+                  return `${t?.name}: ${s.cumulativeScore}`;
+                }),
+              ].join('\n');
+              shareScorecard({
+                element: scorecardRef.current,
+                isDark: theme.palette.mode === 'dark',
+                text: `Round ${latestRound.roundNumber} scores`,
+                fallbackText: fallback,
+              });
+            }}
+            color="primary"
+            sx={{ width: 40, height: 40 }}
+          >
+            <ShareIcon fontSize="small" />
+          </IconButton>
           <Button
             startIcon={<UndoIcon />}
             size="small"
@@ -70,7 +96,7 @@ export default function ScoringView() {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ px: 1.5, pt: 1 }}>
+      <Box ref={scorecardRef} sx={{ px: 1.5, pt: 1 }}>
         {/* Round result cards */}
         <Box className="stagger-children" sx={{ display: 'flex', gap: 1, mb: 2 }}>
           {latestRound.teamScores.map(ts => {

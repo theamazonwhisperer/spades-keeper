@@ -13,6 +13,7 @@ import {
   IconButton,
   AppBar,
   Toolbar,
+  Autocomplete,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -23,7 +24,7 @@ import { GameSettings } from '../types';
 export default function SetupScreen() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { startGame } = useGameStore();
+  const { startGame, savedPlayerNames } = useGameStore();
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
   const [teamName1, setTeamName1] = useState('');
@@ -117,25 +118,25 @@ export default function SetupScreen() {
               autoFocus
             />
             <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField
+              <Autocomplete
+                freeSolo
                 fullWidth
-                label="Player 1"
-                value={p1}
-                onChange={e => setP1(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
+                options={savedPlayerNames.filter(n => n !== p2 && n !== p3 && n !== p4)}
+                inputValue={p1}
+                onInputChange={(_, v) => setP1(v)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Player 1" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                )}
               />
-              <TextField
+              <Autocomplete
+                freeSolo
                 fullWidth
-                label="Player 2"
-                value={p2}
-                onChange={e => setP2(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
+                options={savedPlayerNames.filter(n => n !== p1 && n !== p3 && n !== p4)}
+                inputValue={p2}
+                onInputChange={(_, v) => setP2(v)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Player 2" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                )}
               />
             </Box>
           </CardContent>
@@ -168,25 +169,25 @@ export default function SetupScreen() {
               inputProps={{ maxLength: 20 }}
             />
             <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField
+              <Autocomplete
+                freeSolo
                 fullWidth
-                label="Player 3"
-                value={p3}
-                onChange={e => setP3(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
+                options={savedPlayerNames.filter(n => n !== p1 && n !== p2 && n !== p4)}
+                inputValue={p3}
+                onInputChange={(_, v) => setP3(v)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Player 3" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                )}
               />
-              <TextField
+              <Autocomplete
+                freeSolo
                 fullWidth
-                label="Player 4"
-                value={p4}
-                onChange={e => setP4(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
+                options={savedPlayerNames.filter(n => n !== p1 && n !== p2 && n !== p3)}
+                inputValue={p4}
+                onInputChange={(_, v) => setP4(v)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Player 4" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                )}
               />
             </Box>
           </CardContent>

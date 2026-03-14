@@ -32,6 +32,7 @@ interface GameStore {
   completedGames: Game[];
   deletedGames: Game[];      // soft-deleted games for recovery
   playerStats: Record<string, PlayerStats>;
+  savedPlayerNames: string[];  // remembered player names for quick setup
   darkMode: boolean;
 
   // Editing state
@@ -80,6 +81,10 @@ interface GameStore {
   deletePlayerStats: (key: string) => void;
   clearAllPlayerStats: () => void;
 
+  // Saved player names
+  addSavedPlayerName: (name: string) => void;
+  removeSavedPlayerName: (name: string) => void;
+
   // Settings
   toggleDarkMode: () => void;
 }
@@ -92,6 +97,7 @@ export const useGameStore = create<GameStore>()(
       completedGames: [],
       deletedGames: [],
       playerStats: {},
+      savedPlayerNames: [],
       darkMode: true, // default to dark mode for card game feel
       editingRoundNumber: null,
       editSnapshot: null,
@@ -127,7 +133,19 @@ export const useGameStore = create<GameStore>()(
           currentRound: 1,
         };
 
-        set({ currentGame: game });
+        // Auto-save player names for future quick setup
+        const allNames = [playerNames[0][0], playerNames[0][1], playerNames[1][0], playerNames[1][1]];
+        const existing = get().savedPlayerNames;
+        const merged = [...existing];
+        allNames.forEach(n => {
+          const trimmed = n.trim();
+          if (trimmed && !merged.some(m => m.toLowerCase() === trimmed.toLowerCase())) {
+            merged.push(trimmed);
+          }
+        });
+        merged.sort((a, b) => a.localeCompare(b));
+
+        set({ currentGame: game, savedPlayerNames: merged });
       },
 
       abandonGame: () => {
@@ -596,6 +614,18 @@ export const useGameStore = create<GameStore>()(
 
       clearAllPlayerStats: () => {
         set({ playerStats: {} });
+      },
+
+      addSavedPlayerName: (name) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const existing = get().savedPlayerNames;
+        if (existing.some(n => n.toLowerCase() === trimmed.toLowerCase())) return;
+        set({ savedPlayerNames: [...existing, trimmed].sort((a, b) => a.localeCompare(b)) });
+      },
+
+      removeSavedPlayerName: (name) => {
+        set({ savedPlayerNames: get().savedPlayerNames.filter(n => n !== name) });
       },
 
       toggleDarkMode: () => {

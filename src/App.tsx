@@ -9,6 +9,7 @@ import HomeScreen from './screens/HomeScreen';
 import SetupScreen from './screens/SetupScreen';
 import GameScreen from './screens/GameScreen';
 import HistoryScreen from './screens/HistoryScreen';
+import PlayerStatsScreen from './screens/PlayerStatsScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
 import InstallPrompt from './components/InstallPrompt';
 
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/setup" element={<SetupScreen />} />
             <Route path="/game" element={<GameScreen />} />
             <Route path="/history" element={<HistoryScreen />} />
+            <Route path="/stats" element={<PlayerStatsScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <InstallPrompt />

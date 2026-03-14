@@ -9,6 +9,7 @@ export interface SyncableState {
   completedGames: unknown[];
   deletedGames: unknown[];
   playerStats: Record<string, unknown>;
+  savedPlayerNames: string[];
   darkMode: boolean;
 }
 
@@ -21,6 +22,7 @@ function getSyncableState(): SyncableState {
     completedGames: s.completedGames,
     deletedGames: s.deletedGames,
     playerStats: s.playerStats,
+    savedPlayerNames: s.savedPlayerNames,
     darkMode: s.darkMode,
   };
 }
@@ -59,6 +61,7 @@ export function applyCloudState(cloud: SyncableState) {
     completedGames: cloud.completedGames as ReturnType<typeof useGameStore.getState>['completedGames'],
     deletedGames: cloud.deletedGames as ReturnType<typeof useGameStore.getState>['deletedGames'],
     playerStats: cloud.playerStats as ReturnType<typeof useGameStore.getState>['playerStats'],
+    savedPlayerNames: cloud.savedPlayerNames ?? [],
     darkMode: cloud.darkMode,
   });
 }

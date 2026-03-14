@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import HistoryIcon from '@mui/icons-material/History';
+import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -35,7 +36,6 @@ export default function HomeScreen() {
   const {
     currentGame, savedGames, playerStats,
     abandonGame, saveAndNewGame, resumeGame, deleteSavedGame,
-    deletePlayerStats, clearAllPlayerStats,
     toggleDarkMode, darkMode,
   } = useGameStore();
   const { user, isGuest, signOut, signInWithGoogle } = useAuthStore();
@@ -133,6 +133,15 @@ export default function HomeScreen() {
           )}
         </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="Player Stats">
+            <IconButton
+              onClick={() => navigate('/stats')}
+              color="primary"
+              sx={{ width: 48, height: 48 }}
+            >
+              <LeaderboardIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Game History">
             <IconButton
               onClick={() => navigate('/history')}
@@ -241,7 +250,7 @@ export default function HomeScreen() {
       </Box>
 
       {/* Continue Current Game */}
-      {currentGame && (
+      {currentGame && currentGame.phase !== 'complete' && (
         <Box className="animate-slide-up" sx={{ mb: 3, animationDelay: '150ms' }}>
           <Typography
             variant="subtitle2"
@@ -290,78 +299,18 @@ export default function HomeScreen() {
         </Box>
       )}
 
-      {/* Player Records */}
+      {/* Quick stats link */}
       {topPlayers.length > 0 && (
         <Box className="animate-slide-up" sx={{ mb: 3, animationDelay: '200ms' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Typography
-              variant="subtitle2"
-              color="text.secondary"
-              sx={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}
-            >
-              Player Records
-            </Typography>
-            <Button
-              size="small"
-              color="error"
-              onClick={clearAllPlayerStats}
-              sx={{ fontSize: '0.7rem' }}
-            >
-              Clear All
-            </Button>
-          </Box>
-          <Card>
-            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {topPlayers.map(s => {
-                  const key = s.name.toLowerCase().trim();
-                  return (
-                    <Box
-                      key={s.name}
-                      sx={{
-                        flex: '1 1 calc(33% - 8px)',
-                        minWidth: 80,
-                        textAlign: 'center',
-                        py: 0.75,
-                        px: 1,
-                        borderRadius: 1.5,
-                        bgcolor: alpha(theme.palette.primary.main, 0.06),
-                        position: 'relative',
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        onClick={() => deletePlayerStats(key)}
-                        sx={{
-                          position: 'absolute',
-                          top: -6,
-                          right: -6,
-                          width: 24,
-                          height: 24,
-                          bgcolor: 'background.paper',
-                          border: `1px solid`,
-                          borderColor: 'divider',
-                          color: 'text.secondary',
-                          '&:hover': { color: 'error.main', borderColor: 'error.main' },
-                        }}
-                      >
-                        <DeleteOutlineIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
-                      <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', lineHeight: 1.2 }}>
-                        {s.name}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontFamily: monoFont, fontWeight: 700, color: theme.palette.primary.main }}
-                      >
-                        {s.wins}W–{s.losses}L
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </CardContent>
-          </Card>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<LeaderboardIcon />}
+            onClick={() => navigate('/stats')}
+            sx={{ py: 1.4, fontSize: '0.95rem' }}
+          >
+            Player Stats ({topPlayers.length} player{topPlayers.length !== 1 ? 's' : ''})
+          </Button>
         </Box>
       )}
 
