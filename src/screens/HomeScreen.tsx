@@ -353,6 +353,15 @@ export default function HomeScreen() {
         </Box>
       )}
 
+      {/* Version */}
+      <Typography
+        variant="caption"
+        color="text.disabled"
+        sx={{ textAlign: 'center', display: 'block', mt: 4, mb: 1, fontSize: '0.65rem' }}
+      >
+        v1.1
+      </Typography>
+
     </Box>
   );
 }
