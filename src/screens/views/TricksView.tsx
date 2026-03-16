@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -25,6 +25,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import HomeIcon from '@mui/icons-material/Home';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
+import ShareIcon from '@mui/icons-material/Share';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
@@ -33,6 +34,7 @@ import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import EndGameDialog from '../../components/EndGameDialog';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
+import { shareScorecard } from '../../utils/shareScorecard';
 
 const nilLabel: Record<NilType, string | null> = {
   none: null,
@@ -44,6 +46,7 @@ export default function TricksView() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { currentGame, submitTricks, editBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
+  const scoreCardRef = useRef<HTMLDivElement>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [endGameOpen, setEndGameOpen] = useState(false);
 
@@ -157,6 +160,16 @@ export default function TricksView() {
         open={!!menuAnchor}
         onClose={() => setMenuAnchor(null)}
       >
+        <MenuItem
+          onClick={() => {
+            setMenuAnchor(null);
+            if (scoreCardRef.current) shareScorecard({ element: scoreCardRef.current, isDark: theme.palette.mode === 'dark' });
+          }}
+          disabled={completedRounds.length === 0}
+        >
+          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Share Scorecard</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => { setMenuAnchor(null); editBids(); }}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit Bids</ListItemText>
@@ -389,7 +402,7 @@ export default function TricksView() {
 
       {/* Historical scorecard */}
       {completedRounds.length > 0 && (
-        <Box sx={{ px: 1.5, mt: 3 }}>
+        <Box ref={scoreCardRef} sx={{ px: 1.5, mt: 3 }}>
           <Divider sx={{ mb: 2 }} />
           <Typography
             variant="caption"

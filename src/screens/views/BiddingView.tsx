@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
+import ShareIcon from '@mui/icons-material/Share';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { NilType } from '../../types';
@@ -37,6 +38,7 @@ import EndGameDialog from '../../components/EndGameDialog';
 import GameSettingsDialog from '../../components/GameSettingsDialog';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
+import { shareScorecard } from '../../utils/shareScorecard';
 
 interface BidState {
   nilType: NilType;
@@ -47,6 +49,7 @@ export default function BiddingView() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { currentGame, submitBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
+  const scoreCardRef = useRef<HTMLDivElement>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -181,6 +184,16 @@ export default function BiddingView() {
         open={!!menuAnchor}
         onClose={() => setMenuAnchor(null)}
       >
+        <MenuItem
+          onClick={() => {
+            setMenuAnchor(null);
+            if (scoreCardRef.current) shareScorecard({ element: scoreCardRef.current, isDark: theme.palette.mode === 'dark' });
+          }}
+          disabled={completedRounds.length === 0}
+        >
+          <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Share Scorecard</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => { setMenuAnchor(null); setRenameOpen(true); }}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Rename Teams</ListItemText>
@@ -373,7 +386,7 @@ export default function BiddingView() {
 
       {/* Historical scorecard */}
       {completedRounds.length > 0 && (
-        <Box sx={{ px: 1.5, mt: 3 }}>
+        <Box ref={scoreCardRef} sx={{ px: 1.5, mt: 3 }}>
           <Divider sx={{ mb: 2 }} />
           <Typography
             variant="caption"
