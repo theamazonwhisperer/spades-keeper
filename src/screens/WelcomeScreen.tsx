@@ -10,11 +10,12 @@ import {
 import GoogleIcon from '@mui/icons-material/Google';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import BlockIcon from '@mui/icons-material/Block';
 import { useAuthStore } from '../store/authStore';
 
 export default function WelcomeScreen() {
   const theme = useTheme();
-  const { signInWithGoogle, continueAsGuest } = useAuthStore();
+  const { signInWithGoogle, continueAsGuest, isBlocked } = useAuthStore();
 
   return (
     <Box
@@ -54,6 +55,25 @@ export default function WelcomeScreen() {
           Beautiful scorekeeper for Spades
         </Typography>
       </Box>
+
+      {/* Blocked notice */}
+      {isBlocked && (
+        <Box className="animate-slide-up" sx={{ width: '100%', maxWidth: 360, mb: 3 }}>
+          <Card sx={{ bgcolor: alpha(theme.palette.error.main, 0.08), border: `1px solid ${alpha(theme.palette.error.main, 0.4)}` }}>
+            <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 }, display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+              <BlockIcon sx={{ color: theme.palette.error.main, fontSize: 20, mt: 0.25 }} />
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.error.main, mb: 0.25 }}>
+                  Access restricted
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Your account has been blocked. Please contact the app owner if you think this is an error.
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
 
       {/* Sign in options */}
       <Box className="animate-slide-up" sx={{ width: '100%', maxWidth: 360 }}>

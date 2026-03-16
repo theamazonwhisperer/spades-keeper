@@ -21,6 +21,8 @@ import PeopleIcon from '@mui/icons-material/People';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CloseIcon from '@mui/icons-material/Close';
+import BlockIcon from '@mui/icons-material/Block';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { Game } from '../types';
@@ -39,6 +41,7 @@ interface UserStat {
   out_active_game: boolean;
   out_sharing_enabled: boolean;
   out_player_names: string;
+  out_is_blocked: boolean;
 }
 
 interface UserDetail {
@@ -59,6 +62,7 @@ export default function AdminScreen() {
   const [selectedUser, setSelectedUser] = useState<UserStat | null>(null);
   const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
 
   const isAdmin = user && ADMIN_EMAILS.includes(user.email ?? '');
 
@@ -100,6 +104,22 @@ export default function AdminScreen() {
       });
     }
     setDetailLoading(false);
+  };
+
+  const handleToggleBlock = async (u: UserStat) => {
+    setBlockingUserId(u.out_user_id);
+    const newBlocked = !u.out_is_blocked;
+    const { error } = await supabase.rpc('set_user_blocked', {
+      target_user_id: u.out_user_id,
+      blocked: newBlocked,
+    });
+    if (!error) {
+      setUsers(prev => prev.map(x => x.out_user_id === u.out_user_id ? { ...x, out_is_blocked: newBlocked } : x));
+      if (selectedUser?.out_user_id === u.out_user_id) {
+        setSelectedUser(prev => prev ? { ...prev, out_is_blocked: newBlocked } : prev);
+      }
+    }
+    setBlockingUserId(null);
   };
 
   if (!isAdmin) {
@@ -146,6 +166,23 @@ export default function AdminScreen() {
                 {selectedUser.out_email}
               </Typography>
             </Box>
+            {selectedUser.out_is_blocked && (
+              <Chip label="Blocked" size="small" color="error" sx={{ fontWeight: 700, fontSize: '0.65rem', mr: 1 }} />
+            )}
+            <Button
+              size="small"
+              variant="outlined"
+              color={selectedUser.out_is_blocked ? 'success' : 'error'}
+              startIcon={blockingUserId === selectedUser.out_user_id
+                ? <CircularProgress size={14} />
+                : selectedUser.out_is_blocked ? <LockOpenIcon fontSize="small" /> : <BlockIcon fontSize="small" />
+              }
+              disabled={blockingUserId === selectedUser.out_user_id}
+              onClick={() => handleToggleBlock(selectedUser)}
+              sx={{ mr: 1, fontSize: '0.7rem', py: 0.5 }}
+            >
+              {selectedUser.out_is_blocked ? 'Unblock' : 'Block'}
+            </Button>
             <Chip label="Admin" size="small" color="error" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
           </Toolbar>
         </AppBar>
@@ -340,6 +377,9 @@ export default function AdminScreen() {
                       )}
                     </Box>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                      {u.out_is_blocked && (
+                        <Chip label="Blocked" size="small" color="error" sx={{ fontSize: '0.6rem', height: 20, fontWeight: 700 }} />
+                      )}
                       {u.out_active_game && (
                         <Chip label="Playing" size="small" color="success" sx={{ fontSize: '0.6rem', height: 20, fontWeight: 700 }} />
                       )}
