@@ -96,3 +96,10 @@ export interface UserProfile {
   displayName?: string;
   discoverable: boolean;
 }
+
+export interface SpectatorInfo {
+  spectatorUserId: string;
+  displayName: string;
+  isEditor: boolean;
+  lastSeen: string; // ISO timestamp
+}

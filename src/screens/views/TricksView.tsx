@@ -26,12 +26,15 @@ import HomeIcon from '@mui/icons-material/Home';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import ShareIcon from '@mui/icons-material/Share';
+import PeopleIcon from '@mui/icons-material/People';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
+import { useAuthStore } from '../../store/authStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import EndGameDialog from '../../components/EndGameDialog';
+import SpectatorListDialog from '../../components/SpectatorListDialog';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
 import { shareScorecard } from '../../utils/shareScorecard';
@@ -46,9 +49,11 @@ export default function TricksView() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { currentGame, submitTricks, editBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
+  const { user } = useAuthStore();
   const scoreCardRef = useRef<HTMLDivElement>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [endGameOpen, setEndGameOpen] = useState(false);
+  const [spectatorOpen, setSpectatorOpen] = useState(false);
 
   // useState must come before any early return (Rules of Hooks)
   const [tricks, setTricks] = useState<Record<string, number>>(() => {
@@ -170,6 +175,12 @@ export default function TricksView() {
           <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Share Scorecard</ListItemText>
         </MenuItem>
+        {user && (
+          <MenuItem onClick={() => { setMenuAnchor(null); setSpectatorOpen(true); }}>
+            <ListItemIcon><PeopleIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Spectators</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { setMenuAnchor(null); editBids(); }}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Edit Bids</ListItemText>
@@ -462,6 +473,7 @@ export default function TricksView() {
       </Box>
 
       <EndGameDialog externalOpen={endGameOpen} onExternalClose={() => setEndGameOpen(false)} />
+      <SpectatorListDialog open={spectatorOpen} onClose={() => setSpectatorOpen(false)} />
     </Box>
   );
 }

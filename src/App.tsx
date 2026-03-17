@@ -12,6 +12,7 @@ import HistoryScreen from './screens/HistoryScreen';
 import PlayerStatsScreen from './screens/PlayerStatsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import WatchScreen from './screens/WatchScreen';
+import EditGameScreen from './screens/EditGameScreen';
 import ImportGameScreen from './screens/ImportGameScreen';
 import AdminScreen from './screens/AdminScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
@@ -121,6 +122,9 @@ export default function App() {
           {/* Public routes — no auth required */}
           <Route path="/watch/:userId" element={<WatchScreen />} />
           <Route path="/import-game/:ownerId/:gameId" element={<ImportGameScreen />} />
+
+          {/* Auth-gated editor route */}
+          <Route path="/edit/:hostUserId" element={<AuthGate><EditGameScreen /></AuthGate>} />
 
           {/* Auth-gated routes */}
           <Route path="/" element={<AuthGate><HomeScreen /></AuthGate>} />

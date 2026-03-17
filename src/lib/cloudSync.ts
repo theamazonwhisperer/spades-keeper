@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
 import { logError } from '../utils/logError';
-import type { PlayerLink, UserProfile, Game } from '../types';
+import type { PlayerLink, UserProfile, Game, SpectatorInfo } from '../types';
 
 // The shape of game state we sync to the cloud
 export interface SyncableState {
@@ -126,6 +126,13 @@ export function subscribeToSharedGame(
   };
 }
 
+// When set, cloud saves target this user ID instead of the signed-in user (editor mode)
+let editingForUserId: string | null = null;
+
+export function setEditingForUser(userId: string | null) {
+  editingForUserId = userId;
+}
+
 // Debounced auto-save subscription
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -137,7 +144,7 @@ export async function immediateCloudSave(): Promise<void> {
   }
   const user = useAuthStore.getState().user;
   if (!user) return;
-  await saveCloudState(user.id, getSyncableState());
+  await saveCloudState(editingForUserId ?? user.id, getSyncableState());
 }
 
 export function startCloudSync() {
@@ -146,9 +153,10 @@ export function startCloudSync() {
     const user = useAuthStore.getState().user;
     if (!user) return;
 
+    const targetId = editingForUserId ?? user.id;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      saveCloudState(user.id, getSyncableState());
+      saveCloudState(targetId, getSyncableState());
     }, 1500); // debounce 1.5s
   });
 
@@ -419,4 +427,106 @@ export async function fetchSharedGameByLink(ownerId: string, gameId: string): Pr
 
   if (error || !data) return null;
   return data as Game;
+}
+
+// ─── Spectator Sessions ──────────────────────────────────────
+
+/** Register or refresh the current user as a spectator for a host's game */
+export async function registerSpectator(hostUserId: string, displayName: string): Promise<void> {
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  await supabase.from('spectator_sessions').upsert(
+    { host_user_id: hostUserId, spectator_user_id: user.id, display_name: displayName, last_seen: new Date().toISOString() },
+    { onConflict: 'host_user_id,spectator_user_id' }
+  );
+}
+
+/** Update last_seen heartbeat for the current spectator */
+export async function updateSpectatorLastSeen(hostUserId: string): Promise<void> {
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  await supabase.from('spectator_sessions')
+    .update({ last_seen: new Date().toISOString() })
+    .eq('host_user_id', hostUserId)
+    .eq('spectator_user_id', user.id);
+}
+
+/** Remove the current user's spectator session when leaving */
+export async function unregisterSpectator(hostUserId: string): Promise<void> {
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  await supabase.from('spectator_sessions')
+    .delete()
+    .eq('host_user_id', hostUserId)
+    .eq('spectator_user_id', user.id);
+}
+
+/** Get all spectators for a host (host-only) */
+export async function getSpectators(hostUserId: string): Promise<SpectatorInfo[]> {
+  const { data, error } = await supabase
+    .from('spectator_sessions')
+    .select('spectator_user_id, display_name, is_editor, last_seen')
+    .eq('host_user_id', hostUserId)
+    .order('last_seen', { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(d => ({
+    spectatorUserId: d.spectator_user_id,
+    displayName: d.display_name,
+    isEditor: d.is_editor,
+    lastSeen: d.last_seen,
+  }));
+}
+
+/** Grant or revoke editor access for a spectator (host-only) */
+export async function setSpectatorEditorAccess(
+  hostUserId: string,
+  spectatorUserId: string,
+  isEditor: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from('spectator_sessions')
+    .update({ is_editor: isEditor })
+    .eq('host_user_id', hostUserId)
+    .eq('spectator_user_id', spectatorUserId);
+
+  if (error) console.error('Failed to set editor access:', error.message);
+}
+
+/** Subscribe to the spectator list for a host (realtime) */
+export function subscribeToSpectators(
+  hostUserId: string,
+  onUpdate: (spectators: SpectatorInfo[]) => void
+): () => void {
+  const channel = supabase
+    .channel(`spectators-${hostUserId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'spectator_sessions', filter: `host_user_id=eq.${hostUserId}` },
+      () => { getSpectators(hostUserId).then(onUpdate); }
+    )
+    .subscribe();
+
+  return () => { supabase.removeChannel(channel); };
+}
+
+/** Subscribe to own editor status — fires when the host grants/revokes edit access */
+export function subscribeToEditorStatus(
+  hostUserId: string,
+  spectatorUserId: string,
+  onUpdate: (isEditor: boolean) => void
+): () => void {
+  const channel = supabase
+    .channel(`editor-status-${hostUserId}-${spectatorUserId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'spectator_sessions', filter: `host_user_id=eq.${hostUserId}` },
+      (payload) => {
+        const row = payload.new as { spectator_user_id: string; is_editor: boolean };
+        if (row.spectator_user_id === spectatorUserId) onUpdate(row.is_editor);
+      }
+    )
+    .subscribe();
+
+  return () => { supabase.removeChannel(channel); };
 }

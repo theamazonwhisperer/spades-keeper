@@ -28,14 +28,17 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import ShareIcon from '@mui/icons-material/Share';
+import PeopleIcon from '@mui/icons-material/People';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
+import { useAuthStore } from '../../store/authStore';
 import { NilType } from '../../types';
 import { getLatestTeamScore } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import RenameDialog from '../../components/RenameDialog';
 import EndGameDialog from '../../components/EndGameDialog';
 import GameSettingsDialog from '../../components/GameSettingsDialog';
+import SpectatorListDialog from '../../components/SpectatorListDialog';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
 import { shareScorecard } from '../../utils/shareScorecard';
@@ -49,11 +52,13 @@ export default function BiddingView() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { currentGame, submitBids, editRound, editingRoundNumber, cancelEditRound } = useGameStore();
+  const { user } = useAuthStore();
   const scoreCardRef = useRef<HTMLDivElement>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [endGameOpen, setEndGameOpen] = useState(false);
+  const [spectatorOpen, setSpectatorOpen] = useState(false);
 
   // Initialize from existing round data if we came back via Fix Bids
   const [bids, setBids] = useState<Record<string, BidState>>(() => {
@@ -194,6 +199,12 @@ export default function BiddingView() {
           <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Share Scorecard</ListItemText>
         </MenuItem>
+        {user && (
+          <MenuItem onClick={() => { setMenuAnchor(null); setSpectatorOpen(true); }}>
+            <ListItemIcon><PeopleIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Spectators</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={() => { setMenuAnchor(null); setRenameOpen(true); }}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Rename Teams</ListItemText>
@@ -436,6 +447,7 @@ export default function BiddingView() {
       <RenameDialog open={renameOpen} onClose={() => setRenameOpen(false)} />
       <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <EndGameDialog externalOpen={endGameOpen} onExternalClose={() => setEndGameOpen(false)} />
+      <SpectatorListDialog open={spectatorOpen} onClose={() => setSpectatorOpen(false)} />
     </Box>
   );
 }

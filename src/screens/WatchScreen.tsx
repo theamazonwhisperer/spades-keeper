@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -7,27 +7,43 @@ import {
   CardContent,
   CircularProgress,
   Chip,
+  Button,
   useTheme,
   alpha,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { loadSharedState, subscribeToSharedGame, SyncableState } from '../lib/cloudSync';
+import EditIcon from '@mui/icons-material/Edit';
+import {
+  loadSharedState,
+  subscribeToSharedGame,
+  registerSpectator,
+  updateSpectatorLastSeen,
+  unregisterSpectator,
+  subscribeToEditorStatus,
+  SyncableState,
+} from '../lib/cloudSync';
+import { useAuthStore } from '../store/authStore';
 import { Game } from '../types';
 import ScoreHistoryTable from '../components/ScoreHistoryTable';
 import { monoFont } from '../theme';
 
 export default function WatchScreen() {
   const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
   const theme = useTheme();
+  const { user } = useAuthStore();
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isEditor, setIsEditor] = useState(false);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!userId) return;
 
-    let unsubscribe: (() => void) | undefined;
+    let unsubGame: (() => void) | undefined;
+    let unsubEditor: (() => void) | undefined;
 
     (async () => {
       const state = await loadSharedState(userId);
@@ -40,17 +56,32 @@ export default function WatchScreen() {
       setLastUpdated(new Date());
       setLoading(false);
 
-      // Subscribe to realtime updates
-      unsubscribe = subscribeToSharedGame(userId, (updated: SyncableState) => {
+      // Subscribe to realtime game updates
+      unsubGame = subscribeToSharedGame(userId, (updated: SyncableState) => {
         setGame(updated.currentGame as Game | null);
         setLastUpdated(new Date());
       });
+
+      // If logged in: register presence + subscribe to editor status
+      if (user) {
+        const displayName = user.email?.split('@')[0] ?? 'Spectator';
+        await registerSpectator(userId, displayName);
+        heartbeatRef.current = setInterval(() => updateSpectatorLastSeen(userId), 30_000);
+
+        unsubEditor = subscribeToEditorStatus(userId, user.id, (granted) => {
+          setIsEditor(granted);
+        });
+      }
     })();
 
     return () => {
-      unsubscribe?.();
+      unsubGame?.();
+      unsubEditor?.();
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      if (user && userId) unregisterSpectator(userId);
     };
-  }, [userId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, user?.id]);
 
   if (loading) {
     return (
@@ -145,6 +176,36 @@ export default function WatchScreen() {
               </Card>
             );
           })}
+        </Box>
+      )}
+
+      {/* Editor access banner */}
+      {isEditor && (
+        <Box
+          sx={{
+            mx: 2.5,
+            mb: 2,
+            p: 1.5,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.primary.main, 0.12),
+            border: `1.5px solid ${alpha(theme.palette.primary.main, 0.4)}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+          }}
+        >
+          <EditIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+          <Typography variant="body2" sx={{ flex: 1, fontWeight: 600, color: 'primary.main' }}>
+            You have edit access
+          </Typography>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={() => navigate(`/edit/${userId}`)}
+            sx={{ fontWeight: 700, fontSize: '0.75rem' }}
+          >
+            Edit Scores
+          </Button>
         </Box>
       )}
 
