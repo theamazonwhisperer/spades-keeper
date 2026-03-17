@@ -432,9 +432,17 @@ export async function fetchSharedGameByLink(ownerId: string, gameId: string): Pr
 // ─── Spectator Sessions ──────────────────────────────────────
 
 /** Register or refresh the current user as a spectator for a host's game */
-export async function registerSpectator(hostUserId: string, displayName: string): Promise<void> {
+export async function registerSpectator(hostUserId: string, fallbackName: string): Promise<void> {
   const user = useAuthStore.getState().user;
   if (!user) return;
+
+  // Prefer the user's profile display name over the email prefix
+  let displayName = fallbackName;
+  try {
+    const profile = await getUserProfile(user.id);
+    if (profile?.displayName) displayName = profile.displayName;
+  } catch { /* keep fallback */ }
+
   await supabase.from('spectator_sessions').upsert(
     { host_user_id: hostUserId, spectator_user_id: user.id, display_name: displayName, last_seen: new Date().toISOString() },
     { onConflict: 'host_user_id,spectator_user_id' }
