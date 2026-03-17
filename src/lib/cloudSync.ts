@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
+import { logError } from '../utils/logError';
 import type { PlayerLink, UserProfile, Game } from '../types';
 
 // The shape of game state we sync to the cloud
@@ -53,6 +54,7 @@ async function saveCloudState(userId: string, state: SyncableState): Promise<voi
 
   if (error) {
     console.error('Cloud sync save failed:', error.message);
+    await logError('cloud_sync_save', error.message, { userId });
   }
 }
 
@@ -127,9 +129,20 @@ export function subscribeToSharedGame(
 // Debounced auto-save subscription
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+/** Immediately save to cloud, bypassing the debounce timer. */
+export async function immediateCloudSave(): Promise<void> {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  const user = useAuthStore.getState().user;
+  if (!user) return;
+  await saveCloudState(user.id, getSyncableState());
+}
+
 export function startCloudSync() {
   // Subscribe to game store changes and auto-save for logged-in users
-  return useGameStore.subscribe(() => {
+  const unsubscribe = useGameStore.subscribe(() => {
     const user = useAuthStore.getState().user;
     if (!user) return;
 
@@ -138,6 +151,23 @@ export function startCloudSync() {
       saveCloudState(user.id, getSyncableState());
     }, 1500); // debounce 1.5s
   });
+
+  // Flush pending save when user closes/refreshes the browser
+  const handleUnload = () => {
+    const user = useAuthStore.getState().user;
+    if (!user || !saveTimer) return;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    // Best-effort synchronous-style save via sendBeacon isn't possible here,
+    // but we can at least trigger the async save (may not complete on hard close)
+    saveCloudState(user.id, getSyncableState());
+  };
+  window.addEventListener('beforeunload', handleUnload);
+
+  return () => {
+    unsubscribe();
+    window.removeEventListener('beforeunload', handleUnload);
+  };
 }
 
 // ─── User Profiles ───────────────────────────────────────────

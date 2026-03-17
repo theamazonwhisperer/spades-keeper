@@ -154,7 +154,7 @@ export default function WatchScreen() {
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1.5, fontSize: '0.65rem' }}>
             Round History
           </Typography>
-          <ScoreHistoryTable game={game} onEditRound={() => {}} />
+          <ScoreHistoryTable game={game} />
         </Box>
       )}
 

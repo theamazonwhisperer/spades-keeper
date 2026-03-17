@@ -12,7 +12,7 @@ import {
   NilType,
 } from '../types';
 import { calculateRoundScores, checkGameOver } from '../utils/scoring';
-import { shareGameWithLinkedPlayers, getUserProfile } from '../lib/cloudSync';
+import { shareGameWithLinkedPlayers, getUserProfile, immediateCloudSave } from '../lib/cloudSync';
 import { useAuthStore } from './authStore';
 
 interface BidInput {
@@ -300,6 +300,7 @@ export const useGameStore = create<GameStore>()(
           editingRoundNumber: null,
           editSnapshot: null,
         });
+        immediateCloudSave();
         autoShareWithLinkedPlayers(finalGame);
       },
 
@@ -431,9 +432,11 @@ export const useGameStore = create<GameStore>()(
             editingRoundNumber: null,
             editSnapshot: null,
           });
+          immediateCloudSave();
           autoShareWithLinkedPlayers(finalGame);
         } else {
           set({ currentGame: updatedGame, editingRoundNumber: null, editSnapshot: null });
+          immediateCloudSave();
         }
       },
 
