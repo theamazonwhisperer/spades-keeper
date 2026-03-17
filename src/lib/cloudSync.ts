@@ -39,7 +39,11 @@ export async function loadCloudState(userId: string): Promise<SyncableState | nu
     .eq('user_id', userId)
     .single();
 
-  if (error || !data) return null;
+  if (error) {
+    await logError('cloud_state_load', error.message, { userId, code: error.code });
+    return null;
+  }
+  if (!data) return null;
   return data.game_state as SyncableState;
 }
 
@@ -60,16 +64,20 @@ async function saveCloudState(userId: string, state: SyncableState): Promise<voi
 
 /** Apply cloud state to the local Zustand store */
 export function applyCloudState(cloud: SyncableState) {
-  useGameStore.setState({
-    currentGame: cloud.currentGame as ReturnType<typeof useGameStore.getState>['currentGame'],
-    savedGames: cloud.savedGames as ReturnType<typeof useGameStore.getState>['savedGames'],
-    completedGames: cloud.completedGames as ReturnType<typeof useGameStore.getState>['completedGames'],
-    deletedGames: cloud.deletedGames as ReturnType<typeof useGameStore.getState>['deletedGames'],
-    playerStats: cloud.playerStats as ReturnType<typeof useGameStore.getState>['playerStats'],
-    savedPlayerNames: cloud.savedPlayerNames ?? [],
-    defaultSettings: (cloud.defaultSettings as ReturnType<typeof useGameStore.getState>['defaultSettings']) ?? useGameStore.getState().defaultSettings,
-    darkMode: cloud.darkMode,
-  });
+  try {
+    useGameStore.setState({
+      currentGame: cloud.currentGame as ReturnType<typeof useGameStore.getState>['currentGame'],
+      savedGames: cloud.savedGames as ReturnType<typeof useGameStore.getState>['savedGames'],
+      completedGames: cloud.completedGames as ReturnType<typeof useGameStore.getState>['completedGames'],
+      deletedGames: cloud.deletedGames as ReturnType<typeof useGameStore.getState>['deletedGames'],
+      playerStats: cloud.playerStats as ReturnType<typeof useGameStore.getState>['playerStats'],
+      savedPlayerNames: cloud.savedPlayerNames ?? [],
+      defaultSettings: (cloud.defaultSettings as ReturnType<typeof useGameStore.getState>['defaultSettings']) ?? useGameStore.getState().defaultSettings,
+      darkMode: cloud.darkMode,
+    });
+  } catch (e) {
+    logError('cloud_state_apply', e, { hasCurrentGame: !!cloud.currentGame, completedCount: cloud.completedGames?.length });
+  }
 }
 
 /** Toggle sharing_enabled flag on the user's row */

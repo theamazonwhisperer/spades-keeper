@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { Theme } from '@mui/material/styles';
 import {
   Dialog,
   DialogTitle,
@@ -143,7 +144,7 @@ function SpectatorRow({
   spectator: SpectatorInfo;
   toggling: boolean;
   onToggle: () => void;
-  theme: ReturnType<typeof useTheme>;
+  theme: Theme;
   active: boolean;
 }) {
   return (
