@@ -131,7 +131,7 @@ export const useGameStore = create<GameStore>()(
         nilValue: 100,
         blindNilValue: 200,
         doubleOn10: true,
-        failedNilCountsAsBags: false,
+        failedNilCountsAsBags: true,
         playerMode: '4-player' as const,
       },
       darkMode: true, // default to dark mode for card game feel

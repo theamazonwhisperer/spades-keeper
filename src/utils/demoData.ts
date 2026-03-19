@@ -29,7 +29,7 @@ export function loadDemoGame() {
     nilValue: 100,
     blindNilValue: 200,
     doubleOn10: true,
-    failedNilCountsAsBags: false,
+    failedNilCountsAsBags: true,
     playerMode: '4-player',
   };
 
