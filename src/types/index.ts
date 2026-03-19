@@ -3,8 +3,8 @@ export type NilType = 'none' | 'nil' | 'blind_nil';
 export interface Player {
   id: string;
   name: string;
-  teamIndex: 0 | 1;
-  playerIndex: 0 | 1;
+  teamIndex: number;
+  playerIndex: number;
 }
 
 export interface Team {
@@ -13,11 +13,12 @@ export interface Team {
 }
 
 export interface GameSettings {
+  playerCount: 3 | 4;            // 3 = solo (3 teams of 1), 4 = classic (2 teams of 2)
   winTarget: 200 | 300 | 500;
-  maxRounds: number | null; // null = unlimited
-  nilValue: 50 | 100;        // points per nil (default 100)
-  blindNilValue: 100 | 200;  // points per blind nil (default 200)
-  doubleOn10: boolean;        // true = bids of 10+ score double points
+  maxRounds: number | null;      // null = unlimited
+  nilValue: 50 | 100;            // points per nil (default 100)
+  blindNilValue: 100 | 200;      // points per blind nil (default 200)
+  doubleOn10: boolean;           // true = bids of 10+ score double points
   failedNilCountsAsBags: boolean; // true = broken nil tricks are overtricks/bags only; false = count toward team bid
 }
 

@@ -1,4 +1,9 @@
-import { Game, PlayerRoundData, TeamRoundScore, NilBonus } from '../types';
+import { Game, GameSettings, PlayerRoundData, TeamRoundScore, NilBonus } from '../types';
+
+/** Number of tricks in a round: 17 for 3-player (51 cards), 13 for 4-player (52 cards). */
+export function getTricksPerRound(settings: GameSettings): number {
+  return (settings.playerCount ?? 4) === 3 ? 17 : 13;
+}
 
 /**
  * Calculate scores for a completed round.

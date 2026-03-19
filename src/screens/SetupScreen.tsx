@@ -26,12 +26,23 @@ export default function SetupScreen() {
   const { startGame } = useGameStore();
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
+  // Game mode
+  const [playerCount, setPlayerCount] = useState<3 | 4>(4);
+
+  // 4-player (teams) state
   const [teamName1, setTeamName1] = useState('');
   const [teamName2, setTeamName2] = useState('');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
   const [p3, setP3] = useState('');
   const [p4, setP4] = useState('');
+
+  // 3-player (solo) state
+  const [solo1, setSolo1] = useState('');
+  const [solo2, setSolo2] = useState('');
+  const [solo3, setSolo3] = useState('');
+
+  // Settings
   const [winTarget, setWinTarget] = useState<200 | 300 | 500>(500);
   const [maxRounds, setMaxRounds] = useState<'10' | 'unlimited'>('unlimited');
   const [nilValue, setNilValue] = useState<50 | 100>(100);
@@ -39,12 +50,14 @@ export default function SetupScreen() {
   const [doubleOn10, setDoubleOn10] = useState(true);
   const [failedNilCountsAsBags, setFailedNilCountsAsBags] = useState(false);
 
-  const canStart =
-    teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim();
+  const canStart = playerCount === 4
+    ? teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim()
+    : solo1.trim() && solo2.trim() && solo3.trim();
 
   const handleStart = () => {
     if (!canStart) return;
     const settings: GameSettings = {
+      playerCount,
       winTarget,
       maxRounds: maxRounds === '10' ? 10 : null,
       nilValue,
@@ -52,14 +65,24 @@ export default function SetupScreen() {
       doubleOn10,
       failedNilCountsAsBags,
     };
-    startGame(
-      [teamName1.trim(), teamName2.trim()],
-      [
-        [p1.trim(), p2.trim()],
-        [p3.trim(), p4.trim()],
-      ],
-      settings
-    );
+
+    if (playerCount === 4) {
+      startGame(
+        [teamName1.trim(), teamName2.trim()],
+        [
+          [p1.trim(), p2.trim()],
+          [p3.trim(), p4.trim()],
+        ],
+        settings
+      );
+    } else {
+      // 3-player: each player is their own team
+      startGame(
+        [solo1.trim(), solo2.trim(), solo3.trim()],
+        [[solo1.trim()], [solo2.trim()], [solo3.trim()]],
+        settings
+      );
+    }
     navigate('/game');
   };
 
@@ -88,109 +111,181 @@ export default function SetupScreen() {
       </AppBar>
 
       <Box className="stagger-children" sx={{ px: 2.5, pt: 1 }}>
-        {/* Team 1 */}
-        <Card sx={teamCardSx(theme.palette.primary.main)}>
-          <CardContent sx={{ p: 2 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                textTransform: 'uppercase',
-                letterSpacing: 1.5,
-                color: theme.palette.primary.main,
-                fontWeight: 700,
-                fontSize: '0.65rem',
-              }}
-            >
-              Team 1
-            </Typography>
-            <TextField
-              fullWidth
-              label="Team Name"
-              value={teamName1}
-              onChange={e => setTeamName1(e.target.value)}
-              variant="outlined"
-              size="medium"
-              sx={{ mt: 1, mb: 1.5 }}
-              placeholder="e.g. MLK"
-              inputProps={{ maxLength: 20 }}
-              inputRef={firstFieldRef}
-              autoFocus
-            />
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField
-                fullWidth
-                label="Player 1"
-                value={p1}
-                onChange={e => setP1(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
-              />
-              <TextField
-                fullWidth
-                label="Player 2"
-                value={p2}
-                onChange={e => setP2(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
-              />
-            </Box>
-          </CardContent>
-        </Card>
+        {/* Game Mode */}
+        <Box sx={{ mb: 2.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
+            Game Mode
+          </Typography>
+          <ToggleButtonGroup
+            value={playerCount}
+            exclusive
+            onChange={(_, v) => v && setPlayerCount(v)}
+            fullWidth
+            size="medium"
+          >
+            <ToggleButton value={4}>4 Players (Teams)</ToggleButton>
+            <ToggleButton value={3}>3 Players (Solo)</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
 
-        {/* Team 2 */}
-        <Card sx={teamCardSx(theme.palette.secondary.main)}>
-          <CardContent sx={{ p: 2 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                textTransform: 'uppercase',
-                letterSpacing: 1.5,
-                color: theme.palette.secondary.main,
-                fontWeight: 700,
-                fontSize: '0.65rem',
-              }}
-            >
-              Team 2
-            </Typography>
-            <TextField
-              fullWidth
-              label="Team Name"
-              value={teamName2}
-              onChange={e => setTeamName2(e.target.value)}
-              variant="outlined"
-              size="medium"
-              sx={{ mt: 1, mb: 1.5 }}
-              placeholder="e.g. JFK"
-              inputProps={{ maxLength: 20 }}
-            />
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField
-                fullWidth
-                label="Player 3"
-                value={p3}
-                onChange={e => setP3(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
-              />
-              <TextField
-                fullWidth
-                label="Player 4"
-                value={p4}
-                onChange={e => setP4(e.target.value)}
-                variant="outlined"
-                size="medium"
-                placeholder="Name"
-                inputProps={{ maxLength: 15 }}
-              />
-            </Box>
-          </CardContent>
-        </Card>
+        {playerCount === 4 ? (
+          <>
+            {/* Team 1 */}
+            <Card sx={teamCardSx(theme.palette.primary.main)}>
+              <CardContent sx={{ p: 2 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    textTransform: 'uppercase',
+                    letterSpacing: 1.5,
+                    color: theme.palette.primary.main,
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                  }}
+                >
+                  Team 1
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Team Name"
+                  value={teamName1}
+                  onChange={e => setTeamName1(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  sx={{ mt: 1, mb: 1.5 }}
+                  placeholder="e.g. MLK"
+                  inputProps={{ maxLength: 20 }}
+                  inputRef={firstFieldRef}
+                  autoFocus
+                />
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <TextField
+                    fullWidth
+                    label="Player 1"
+                    value={p1}
+                    onChange={e => setP1(e.target.value)}
+                    variant="outlined"
+                    size="medium"
+                    placeholder="Name"
+                    inputProps={{ maxLength: 15 }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Player 2"
+                    value={p2}
+                    onChange={e => setP2(e.target.value)}
+                    variant="outlined"
+                    size="medium"
+                    placeholder="Name"
+                    inputProps={{ maxLength: 15 }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Team 2 */}
+            <Card sx={teamCardSx(theme.palette.secondary.main)}>
+              <CardContent sx={{ p: 2 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    textTransform: 'uppercase',
+                    letterSpacing: 1.5,
+                    color: theme.palette.secondary.main,
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                  }}
+                >
+                  Team 2
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Team Name"
+                  value={teamName2}
+                  onChange={e => setTeamName2(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  sx={{ mt: 1, mb: 1.5 }}
+                  placeholder="e.g. JFK"
+                  inputProps={{ maxLength: 20 }}
+                />
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <TextField
+                    fullWidth
+                    label="Player 3"
+                    value={p3}
+                    onChange={e => setP3(e.target.value)}
+                    variant="outlined"
+                    size="medium"
+                    placeholder="Name"
+                    inputProps={{ maxLength: 15 }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Player 4"
+                    value={p4}
+                    onChange={e => setP4(e.target.value)}
+                    variant="outlined"
+                    size="medium"
+                    placeholder="Name"
+                    inputProps={{ maxLength: 15 }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          /* 3-Player Solo Mode */
+          <Card sx={teamCardSx(theme.palette.primary.main)}>
+            <CardContent sx={{ p: 2 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  textTransform: 'uppercase',
+                  letterSpacing: 1.5,
+                  color: theme.palette.primary.main,
+                  fontWeight: 700,
+                  fontSize: '0.65rem',
+                }}
+              >
+                Players (each plays solo)
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Player 1"
+                  value={solo1}
+                  onChange={e => setSolo1(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  placeholder="Name"
+                  inputProps={{ maxLength: 15 }}
+                  autoFocus
+                />
+                <TextField
+                  fullWidth
+                  label="Player 2"
+                  value={solo2}
+                  onChange={e => setSolo2(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  placeholder="Name"
+                  inputProps={{ maxLength: 15 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Player 3"
+                  value={solo3}
+                  onChange={e => setSolo3(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  placeholder="Name"
+                  inputProps={{ maxLength: 15 }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        )}
 
         <Divider sx={{ my: 2 }} />
 
@@ -243,8 +338,8 @@ export default function SetupScreen() {
             fullWidth
             size="medium"
           >
-            <ToggleButton value={50}>±50 pts</ToggleButton>
-            <ToggleButton value={100}>±100 pts</ToggleButton>
+            <ToggleButton value={50}>&#177;50 pts</ToggleButton>
+            <ToggleButton value={100}>&#177;100 pts</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
@@ -259,8 +354,8 @@ export default function SetupScreen() {
             fullWidth
             size="medium"
           >
-            <ToggleButton value={100}>±100 pts</ToggleButton>
-            <ToggleButton value={200}>±200 pts</ToggleButton>
+            <ToggleButton value={100}>&#177;100 pts</ToggleButton>
+            <ToggleButton value={200}>&#177;200 pts</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 

@@ -39,8 +39,8 @@ interface GameStore {
 
   // Game lifecycle
   startGame: (
-    teamNames: [string, string],
-    playerNames: [[string, string], [string, string]],
+    teamNames: string[],
+    playerNames: string[][],
     settings: GameSettings
   ) => void;
   abandonGame: () => void;
@@ -82,20 +82,23 @@ export const useGameStore = create<GameStore>()(
       editSnapshot: null,
 
       startGame: (teamNames, playerNames, settings) => {
-        const teams = [
-          { id: uuidv4(), name: teamNames[0] },
-          { id: uuidv4(), name: teamNames[1] },
-        ];
+        const teams = teamNames.map(name => ({ id: uuidv4(), name }));
 
-        const players: Player[] = [
-          { id: uuidv4(), name: playerNames[0][0], teamIndex: 0, playerIndex: 0 },
-          { id: uuidv4(), name: playerNames[0][1], teamIndex: 0, playerIndex: 1 },
-          { id: uuidv4(), name: playerNames[1][0], teamIndex: 1, playerIndex: 0 },
-          { id: uuidv4(), name: playerNames[1][1], teamIndex: 1, playerIndex: 1 },
-        ];
+        const players: Player[] = [];
+        playerNames.forEach((teamPlayerNames, teamIdx) => {
+          teamPlayerNames.forEach((name, playerIdx) => {
+            players.push({
+              id: uuidv4(),
+              name,
+              teamIndex: teamIdx,
+              playerIndex: playerIdx,
+            });
+          });
+        });
 
         const fullSettings: GameSettings = {
           ...settings,
+          playerCount: settings.playerCount ?? 4,
           nilValue: settings.nilValue ?? 100,
           blindNilValue: settings.blindNilValue ?? 200,
           doubleOn10: settings.doubleOn10 ?? true,
@@ -157,20 +160,14 @@ export const useGameStore = create<GameStore>()(
       rematch: () => {
         const game = get().currentGame;
         if (!game) return;
-        get().startGame(
-          [game.teams[0].name, game.teams[1].name],
-          [
-            [
-              game.players.find(p => p.teamIndex === 0 && p.playerIndex === 0)!.name,
-              game.players.find(p => p.teamIndex === 0 && p.playerIndex === 1)!.name,
-            ],
-            [
-              game.players.find(p => p.teamIndex === 1 && p.playerIndex === 0)!.name,
-              game.players.find(p => p.teamIndex === 1 && p.playerIndex === 1)!.name,
-            ],
-          ],
-          game.settings
+        const teamNames = game.teams.map(t => t.name);
+        const playerNames = game.teams.map((_, teamIdx) =>
+          game.players
+            .filter(p => p.teamIndex === teamIdx)
+            .sort((a, b) => a.playerIndex - b.playerIndex)
+            .map(p => p.name)
         );
+        get().startGame(teamNames, playerNames, game.settings);
       },
 
       submitBids: (bids) => {

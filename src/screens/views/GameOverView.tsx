@@ -53,7 +53,7 @@ export default function GameOverView() {
     const scores = lastRound?.teamScores ?? [];
     const lines = [
       `♠ SpadesKeeper`,
-      `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
+      currentGame.teams.map(t => t.name).join(' vs '),
       `${completedRounds.length} round${completedRounds.length !== 1 ? 's' : ''}`,
       ``,
       ...scores.map(ts => {

@@ -24,6 +24,7 @@ export function loadDemoGame() {
   ];
 
   const settings: GameSettings = {
+    playerCount: 4,
     winTarget: 500,
     maxRounds: null,
     nilValue: 100,

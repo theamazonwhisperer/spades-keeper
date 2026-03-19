@@ -296,7 +296,7 @@ export default function HomeScreen() {
                           />
                         )}
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {game.teams[0].name} vs {game.teams[1].name}
+                          {game.teams.map(t => t.name).join(' vs ')}
                         </Typography>
                       </Box>
                       <Typography variant="caption" color="text.secondary">
@@ -341,7 +341,7 @@ function GameCard({ game, onClick, active }: { game: Game; onClick: () => void; 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-              {game.teams[0].name} vs {game.teams[1].name}
+              {game.teams.map(t => t.name).join(' vs ')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Round {game.currentRound} · {game.phase === 'bidding' ? 'Bidding' : game.phase === 'tricks' ? 'Tricks' : game.phase === 'scoring' ? 'Scoring' : 'Complete'}
