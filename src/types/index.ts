@@ -3,8 +3,8 @@ export type NilType = 'none' | 'nil' | 'blind_nil';
 export interface Player {
   id: string;
   name: string;
-  teamIndex: 0 | 1;
-  playerIndex: 0 | 1;
+  teamIndex: 0 | 1 | 2;
+  playerIndex: 0 | 1 | 2;
   linkedUserId?: string; // Supabase user ID if this player is a linked account
 }
 
@@ -20,6 +20,7 @@ export interface GameSettings {
   blindNilValue: 100 | 200;  // points per blind nil (default 200)
   doubleOn10: boolean;        // true = bids of 10+ score double points
   failedNilCountsAsBags: boolean; // true = broken nil tricks are overtricks/bags only; false = count toward team bid
+  playerMode: '4-player' | '3-player'; // 4-player = 2 teams of 2; 3-player = 3 solo players
 }
 
 export interface PlayerStats {

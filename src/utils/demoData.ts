@@ -30,6 +30,7 @@ export function loadDemoGame() {
     blindNilValue: 200,
     doubleOn10: true,
     failedNilCountsAsBags: false,
+    playerMode: '4-player',
   };
 
   // Helper to build a round and calculate scores

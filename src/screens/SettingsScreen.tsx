@@ -369,6 +369,7 @@ export default function SettingsScreen() {
             blindNilValue: 200,
             doubleOn10: true,
             failedNilCountsAsBags: false,
+            playerMode: '4-player',
           })}
           sx={{ mb: 2 }}
         >

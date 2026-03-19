@@ -44,8 +44,8 @@ interface GameStore {
 
   // Game lifecycle
   startGame: (
-    teamNames: [string, string],
-    playerNames: [[string, string], [string, string]],
+    teamNames: string[],
+    playerNames: string[][],
     settings: GameSettings,
     linkedUserMap?: Map<string, string>
   ) => void;
@@ -132,18 +132,16 @@ export const useGameStore = create<GameStore>()(
         blindNilValue: 200,
         doubleOn10: true,
         failedNilCountsAsBags: false,
+        playerMode: '4-player' as const,
       },
       darkMode: true, // default to dark mode for card game feel
       editingRoundNumber: null,
       editSnapshot: null,
 
       startGame: (teamNames, playerNames, settings, linkedUserMap) => {
-        const teams = [
-          { id: uuidv4(), name: teamNames[0] },
-          { id: uuidv4(), name: teamNames[1] },
-        ];
+        const teams = teamNames.map(name => ({ id: uuidv4(), name }));
 
-        const makePlayer = (name: string, teamIndex: 0 | 1, playerIndex: 0 | 1): Player => ({
+        const makePlayer = (name: string, teamIndex: 0 | 1 | 2, playerIndex: 0 | 1 | 2): Player => ({
           id: uuidv4(),
           name,
           teamIndex,
@@ -151,18 +149,18 @@ export const useGameStore = create<GameStore>()(
           ...(linkedUserMap?.get(name) ? { linkedUserId: linkedUserMap.get(name) } : {}),
         });
 
-        const players: Player[] = [
-          makePlayer(playerNames[0][0], 0, 0),
-          makePlayer(playerNames[0][1], 0, 1),
-          makePlayer(playerNames[1][0], 1, 0),
-          makePlayer(playerNames[1][1], 1, 1),
-        ];
+        const players: Player[] = teamNames.flatMap((_, teamIdx) =>
+          playerNames[teamIdx].map((name, playerIdx) =>
+            makePlayer(name, teamIdx as 0 | 1 | 2, playerIdx as 0 | 1 | 2)
+          )
+        );
 
         const fullSettings: GameSettings = {
           ...settings,
           nilValue: settings.nilValue ?? 100,
           blindNilValue: settings.blindNilValue ?? 200,
           doubleOn10: settings.doubleOn10 ?? true,
+          playerMode: settings.playerMode ?? '4-player',
         };
 
         const game: Game = {
@@ -177,7 +175,7 @@ export const useGameStore = create<GameStore>()(
         };
 
         // Auto-save player names for future quick setup
-        const allNames = [playerNames[0][0], playerNames[0][1], playerNames[1][0], playerNames[1][1]];
+        const allNames = players.map(p => p.name);
         const existing = get().savedPlayerNames;
         const merged = [...existing];
         allNames.forEach(n => {
@@ -233,20 +231,14 @@ export const useGameStore = create<GameStore>()(
       rematch: () => {
         const game = get().currentGame;
         if (!game) return;
-        get().startGame(
-          [game.teams[0].name, game.teams[1].name],
-          [
-            [
-              game.players.find(p => p.teamIndex === 0 && p.playerIndex === 0)!.name,
-              game.players.find(p => p.teamIndex === 0 && p.playerIndex === 1)!.name,
-            ],
-            [
-              game.players.find(p => p.teamIndex === 1 && p.playerIndex === 0)!.name,
-              game.players.find(p => p.teamIndex === 1 && p.playerIndex === 1)!.name,
-            ],
-          ],
-          game.settings
+        const teamNames = game.teams.map(t => t.name);
+        const playerNames = game.teams.map(t =>
+          game.players
+            .filter(p => p.teamIndex === game.teams.indexOf(t))
+            .sort((a, b) => a.playerIndex - b.playerIndex)
+            .map(p => p.name)
         );
+        get().startGame(teamNames, playerNames, game.settings);
       },
 
       endGameEarly: () => {
@@ -263,11 +255,9 @@ export const useGameStore = create<GameStore>()(
         const lastRound = completedRounds[completedRounds.length - 1];
         // Determine winner by highest cumulative score
         let winnerId: string | undefined;
-        if (lastRound.teamScores.length === 2) {
-          const [a, b] = lastRound.teamScores;
-          if (a.cumulativeScore !== b.cumulativeScore) {
-            winnerId = a.cumulativeScore > b.cumulativeScore ? a.teamId : b.teamId;
-          }
+        const sorted = [...lastRound.teamScores].sort((a, b) => b.cumulativeScore - a.cumulativeScore);
+        if (sorted.length >= 2 && sorted[0].cumulativeScore !== sorted[1].cumulativeScore) {
+          winnerId = sorted[0].teamId;
         }
 
         const finalGame: Game = {

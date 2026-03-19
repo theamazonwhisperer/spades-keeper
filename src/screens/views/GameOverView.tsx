@@ -77,7 +77,7 @@ export default function GameOverView() {
     const scores = lastRound?.teamScores ?? [];
     const fallback = [
       `♠ SpadesKeeper`,
-      `${currentGame.teams[0].name} vs ${currentGame.teams[1].name}`,
+      currentGame.teams.map(t => t.name).join(' vs '),
       ...scores.map(ts => {
         const team = currentGame.teams.find(t => t.id === ts.teamId);
         const flag = ts.teamId === currentGame.winnerId ? ' 🏆' : '';

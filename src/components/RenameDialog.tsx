@@ -23,53 +23,64 @@ export default function RenameDialog({ open, onClose }: Props) {
   const theme = useTheme();
   const { currentGame, renamePlayer, renameTeam } = useGameStore();
 
-  // Local state mirrors the current names for editing
-  const [teamNames, setTeamNames] = useState<[string, string]>(['', '']);
-  const [playerNames, setPlayerNames] = useState<string[]>(['', '', '', '']);
+  const [teamNames, setTeamNames] = useState<string[]>([]);
+  const [playerNames, setPlayerNames] = useState<string[]>([]);
 
-  // Sync local state when dialog opens
   useEffect(() => {
     if (open && currentGame) {
-      setTeamNames([currentGame.teams[0].name, currentGame.teams[1].name]);
+      setTeamNames(currentGame.teams.map(t => t.name));
       setPlayerNames(currentGame.players.map(p => p.name));
     }
   }, [open, currentGame]);
 
   if (!currentGame) return null;
 
+  const is3Player = currentGame.settings.playerMode === '3-player';
+
   const handleSave = () => {
-    // Update team names
-    renameTeam(currentGame.teams[0].id, teamNames[0]);
-    renameTeam(currentGame.teams[1].id, teamNames[1]);
-    // Update player names (players are ordered 0-3)
+    currentGame.teams.forEach((team, teamIdx) => {
+      renameTeam(team.id, teamNames[teamIdx]);
+    });
     currentGame.players.forEach((player, idx) => {
       if (playerNames[idx] !== player.name) {
         renamePlayer(player.id, playerNames[idx]);
       }
     });
+    // In 3-player mode, team name mirrors the single player's name
+    if (is3Player) {
+      currentGame.teams.forEach((team, teamIdx) => {
+        const teamPlayer = currentGame.players.find(p => p.teamIndex === teamIdx);
+        if (teamPlayer) {
+          renameTeam(team.id, playerNames[currentGame.players.indexOf(teamPlayer)]);
+        }
+      });
+    }
     onClose();
   };
 
-  const updatePlayerName = (idx: number, value: string) => {
-    setPlayerNames(prev => {
-      const next = [...prev];
-      next[idx] = value;
-      return next;
-    });
+  const updateTeamName = (idx: number, value: string) => {
+    setTeamNames(prev => { const next = [...prev]; next[idx] = value; return next; });
   };
 
-  const canSave = teamNames[0].trim() && teamNames[1].trim() &&
-    playerNames.every(n => n.trim());
+  const updatePlayerName = (idx: number, value: string) => {
+    setPlayerNames(prev => { const next = [...prev]; next[idx] = value; return next; });
+  };
+
+  const canSave = is3Player
+    ? playerNames.every(n => n.trim())
+    : teamNames.every(n => n.trim()) && playerNames.every(n => n.trim());
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ fontWeight: 700 }}>Rename Players & Teams</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 700 }}>
+        {is3Player ? 'Rename Players' : 'Rename Players & Teams'}
+      </DialogTitle>
       <DialogContent dividers>
         {currentGame.teams.map((team, teamIdx) => {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
 
           return (
-            <Box key={team.id} sx={{ mb: teamIdx === 0 ? 2 : 0 }}>
+            <Box key={team.id} sx={{ mb: teamIdx < currentGame.teams.length - 1 ? 2 : 0 }}>
               <Typography
                 variant="caption"
                 sx={{
@@ -82,27 +93,26 @@ export default function RenameDialog({ open, onClose }: Props) {
                   mb: 1,
                 }}
               >
-                Team {teamIdx + 1}
+                {is3Player ? `Player ${teamIdx + 1}` : `Team ${teamIdx + 1}`}
               </Typography>
 
-              <TextField
-                fullWidth
-                label="Team Name"
-                value={teamNames[teamIdx]}
-                onChange={e => {
-                  const next: [string, string] = [...teamNames] as [string, string];
-                  next[teamIdx] = e.target.value;
-                  setTeamNames(next);
-                }}
-                size="medium"
-                sx={{
-                  mb: 1.5,
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.04),
-                  },
-                }}
-                inputProps={{ maxLength: 20 }}
-              />
+              {/* Team name field — hidden in 3-player (team name auto-mirrors player) */}
+              {!is3Player && (
+                <TextField
+                  fullWidth
+                  label="Team Name"
+                  value={teamNames[teamIdx] ?? ''}
+                  onChange={e => updateTeamName(teamIdx, e.target.value)}
+                  size="medium"
+                  sx={{
+                    mb: 1.5,
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.04),
+                    },
+                  }}
+                  inputProps={{ maxLength: 20 }}
+                />
+              )}
 
               <Box sx={{ display: 'flex', gap: 1.5 }}>
                 {teamPlayers.map(player => {
@@ -111,7 +121,7 @@ export default function RenameDialog({ open, onClose }: Props) {
                     <TextField
                       key={player.id}
                       fullWidth
-                      label={`Player ${globalIdx + 1}`}
+                      label={is3Player ? 'Name' : `Player ${globalIdx + 1}`}
                       value={playerNames[globalIdx] ?? ''}
                       onChange={e => updatePlayerName(globalIdx, e.target.value)}
                       size="medium"
@@ -121,7 +131,7 @@ export default function RenameDialog({ open, onClose }: Props) {
                 })}
               </Box>
 
-              {teamIdx === 0 && <Divider sx={{ mt: 2 }} />}
+              {teamIdx < currentGame.teams.length - 1 && <Divider sx={{ mt: 2 }} />}
             </Box>
           );
         })}

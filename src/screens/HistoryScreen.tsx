@@ -178,7 +178,7 @@ export default function HistoryScreen() {
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                           <Typography variant="subtitle1">
-                            {game.teams[0].name} vs {game.teams[1].name}
+                            {game.teams.map(t => t.name).join(' vs ')}
                           </Typography>
                           {winner && (
                             <Chip
@@ -325,7 +325,7 @@ export default function HistoryScreen() {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Box sx={{ flex: 1 }}>
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {game.teams[0].name} vs {game.teams[1].name}
+                                {game.teams.map(t => t.name).join(' vs ')}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 {date} · {completedRounds.length} rounds
