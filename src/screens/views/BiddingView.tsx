@@ -83,6 +83,7 @@ export default function BiddingView() {
   if (!currentGame) return null;
 
   const tricksPerRound = getTricksPerRound(currentGame);
+  const is3Player = currentGame.settings.playerMode === '3-player';
 
   const updateBid = (playerId: string, delta: number) => {
     setBids(prev => {
@@ -222,55 +223,62 @@ export default function BiddingView() {
       </Menu>
 
       {/* Bidding section */}
-      <Box sx={{ display: 'flex', px: 1.5, pt: 1, gap: 1 }}>
+      <Box sx={{ display: 'flex', px: is3Player ? 0.75 : 1.5, pt: 1, gap: is3Player ? 0.5 : 1 }}>
         {currentGame.teams.map((team, teamIdx) => {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
           const tb = teamBid(teamIdx);
           const isDouble = (currentGame.settings.doubleOn10 ?? true) && tb >= 10;
           const { score, bags } = getLatestTeamScore(currentGame, team.id);
           const hasHistory = completedRounds.length > 0;
+          const btnSize = is3Player ? 36 : 48;
 
           return (
-            <Box key={team.id} sx={{ flex: 1 }}>
+            <Box key={team.id} sx={{ flex: 1, minWidth: 0 }}>
               {/* Merged team header */}
               <Box
                 sx={{
                   textAlign: 'center',
-                  py: 1,
-                  px: 1,
+                  py: is3Player ? 0.5 : 1,
+                  px: is3Player ? 0.5 : 1,
                   mb: 1,
                   borderRadius: 2,
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                 }}
               >
-                <Typography variant="h6" color="primary" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
+                <Typography
+                  variant={is3Player ? 'body2' : 'h6'}
+                  color="primary"
+                  sx={{ fontWeight: 800, lineHeight: 1.1 }}
+                  noWrap
+                >
                   {team.name}
                 </Typography>
                 {hasHistory && (
                   <>
                     <Typography
-                      variant="h4"
+                      variant={is3Player ? 'h5' : 'h4'}
                       color="primary"
                       sx={{ fontWeight: 900, lineHeight: 1.1, fontFamily: monoFont }}
                     >
                       {score}
                     </Typography>
                     <Typography
-                      variant="body2"
+                      variant="caption"
                       color={bags >= 7 ? 'warning.main' : 'text.secondary'}
-                      sx={{ fontWeight: bags >= 7 ? 700 : 400 }}
+                      sx={{ fontWeight: bags >= 7 ? 700 : 400, display: 'block' }}
                     >
                       {bags >= 7 && '⚠ '}{bags} bag{bags !== 1 ? 's' : ''}
                     </Typography>
                   </>
                 )}
                 <Typography
-                  variant="body1"
+                  variant="caption"
                   sx={{
                     color: isDouble ? theme.palette.error.main : 'text.secondary',
                     fontWeight: isDouble ? 700 : 500,
                     fontFamily: monoFont,
-                    mt: hasHistory ? 0.5 : 0,
+                    display: 'block',
+                    mt: hasHistory ? 0.25 : 0,
                   }}
                 >
                   Bid: {tb}{isDouble && ' ×2'}
@@ -297,40 +305,41 @@ export default function BiddingView() {
                       )}`,
                     }}
                   >
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <CardContent sx={{ p: is3Player ? 1 : 1.5, '&:last-child': { pb: is3Player ? 1 : 1.5 } }}>
                       <Typography
-                        variant="h6"
-                        sx={{ textAlign: 'center', fontWeight: 700, mb: 1 }}
+                        variant={is3Player ? 'body2' : 'h6'}
+                        sx={{ textAlign: 'center', fontWeight: 700, mb: 0.75 }}
+                        noWrap
                       >
                         {player.name}
                       </Typography>
 
-                      {/* Nil type selector — Nil / Blind only; neither = regular */}
+                      {/* Nil type selector */}
                       <ToggleButtonGroup
                         value={state.nilType === 'none' ? null : state.nilType}
                         exclusive
                         onChange={(_, v) => updateNilType(player.id, v ?? 'none')}
                         size="small"
                         fullWidth
-                        sx={{ mb: 1.5 }}
+                        sx={{ mb: 1 }}
                       >
-                        <ToggleButton value="nil" sx={{ fontSize: '0.8rem', py: 0.75, minHeight: 40, fontWeight: 600 }}>
+                        <ToggleButton value="nil" sx={{ fontSize: is3Player ? '0.65rem' : '0.8rem', py: is3Player ? 0.5 : 0.75, minHeight: is3Player ? 32 : 40, fontWeight: 600, px: 0.5 }}>
                           Nil
                         </ToggleButton>
-                        <ToggleButton value="blind_nil" sx={{ fontSize: '0.8rem', py: 0.75, minHeight: 40, fontWeight: 600 }}>
-                          Blind Nil
+                        <ToggleButton value="blind_nil" sx={{ fontSize: is3Player ? '0.65rem' : '0.8rem', py: is3Player ? 0.5 : 0.75, minHeight: is3Player ? 32 : 40, fontWeight: 600, px: 0.5 }}>
+                          {is3Player ? 'Blind' : 'Blind Nil'}
                         </ToggleButton>
                       </ToggleButtonGroup>
 
                       {/* Bid counter or nil label */}
                       {isNil ? (
-                        <Box sx={{ textAlign: 'center', py: 0.5 }}>
+                        <Box sx={{ textAlign: 'center', py: 0.25 }}>
                           <Chip
                             label={state.nilType === 'blind_nil' ? '+200/−200' : '+100/−100'}
                             size="small"
                             sx={{
                               fontWeight: 700,
-                              fontSize: '0.75rem',
+                              fontSize: is3Player ? '0.6rem' : '0.75rem',
                               fontFamily: monoFont,
                               bgcolor: alpha(
                                 state.nilType === 'blind_nil'
@@ -351,25 +360,25 @@ export default function BiddingView() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: 1,
+                            gap: is3Player ? 0.5 : 1,
                           }}
                         >
                           <IconButton
                             onClick={() => { haptic('light'); updateBid(player.id, -1); }}
                             disabled={state.amount <= 0}
                             sx={{
-                              width: 48,
-                              height: 48,
+                              width: btnSize,
+                              height: btnSize,
                               bgcolor: alpha(theme.palette.primary.main, 0.1),
                               borderRadius: 2,
                               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                             }}
                           >
-                            <RemoveIcon />
+                            <RemoveIcon fontSize={is3Player ? 'small' : 'medium'} />
                           </IconButton>
                           <Typography
-                            variant="h4"
-                            sx={{ fontWeight: 900, minWidth: 40, textAlign: 'center', fontFamily: monoFont }}
+                            variant={is3Player ? 'h5' : 'h4'}
+                            sx={{ fontWeight: 900, minWidth: is3Player ? 28 : 40, textAlign: 'center', fontFamily: monoFont }}
                           >
                             {state.amount}
                           </Typography>
@@ -377,14 +386,14 @@ export default function BiddingView() {
                             onClick={() => { haptic('light'); updateBid(player.id, 1); }}
                             disabled={state.amount >= tricksPerRound}
                             sx={{
-                              width: 48,
-                              height: 48,
+                              width: btnSize,
+                              height: btnSize,
                               bgcolor: alpha(theme.palette.primary.main, 0.1),
                               borderRadius: 2,
                               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                             }}
                           >
-                            <AddIcon />
+                            <AddIcon fontSize={is3Player ? 'small' : 'medium'} />
                           </IconButton>
                         </Box>
                       )}

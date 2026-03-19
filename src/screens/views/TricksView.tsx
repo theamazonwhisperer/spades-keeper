@@ -71,6 +71,7 @@ export default function TricksView() {
   if (!currentGame) return null;
 
   const tricksPerRound = getTricksPerRound(currentGame);
+  const is3Player = currentGame.settings.playerMode === '3-player';
 
   const currentRound = currentGame.rounds.find(r => !r.isComplete)
     ?? currentGame.rounds[currentGame.rounds.length - 1];
@@ -215,8 +216,8 @@ export default function TricksView() {
         />
       </Box>
 
-      {/* Two-column player layout */}
-      <Box sx={{ display: 'flex', px: 1.5, pt: 1.5, gap: 1 }}>
+      {/* Player layout */}
+      <Box sx={{ display: 'flex', px: is3Player ? 0.75 : 1.5, pt: 1.5, gap: is3Player ? 0.5 : 1 }}>
         {currentGame.teams.map((team, teamIdx) => {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
           const teamTricks = teamPlayers.reduce((sum, p) => sum + (tricks[p.id] ?? 0), 0);
@@ -230,44 +231,50 @@ export default function TricksView() {
           const teamMade = teamTricks >= teamBidVal;
           const { score, bags } = getLatestTeamScore(currentGame, team.id);
           const hasHistory = completedRounds.length > 0;
+          const btnSize = is3Player ? 36 : 48;
 
           return (
-            <Box key={team.id} sx={{ flex: 1 }}>
-              {/* Merged team header */}
+            <Box key={team.id} sx={{ flex: 1, minWidth: 0 }}>
+              {/* Team header */}
               <Box
                 sx={{
                   textAlign: 'center',
-                  py: 1,
-                  px: 1,
+                  py: is3Player ? 0.5 : 1,
+                  px: is3Player ? 0.5 : 1,
                   mb: 1,
                   borderRadius: 2,
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                 }}
               >
-                <Typography variant="h6" color="primary" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
+                <Typography
+                  variant={is3Player ? 'body2' : 'h6'}
+                  color="primary"
+                  sx={{ fontWeight: 800, lineHeight: 1.1 }}
+                  noWrap
+                >
                   {team.name}
                 </Typography>
                 {hasHistory && (
                   <>
                     <Typography
-                      variant="h4"
+                      variant={is3Player ? 'h5' : 'h4'}
                       color="primary"
                       sx={{ fontWeight: 900, lineHeight: 1.1, fontFamily: monoFont }}
                     >
                       {score}
                     </Typography>
                     <Typography
-                      variant="body2"
+                      variant="caption"
                       color={bags >= 7 ? 'warning.main' : 'text.secondary'}
-                      sx={{ fontWeight: bags >= 7 ? 700 : 400 }}
+                      sx={{ fontWeight: bags >= 7 ? 700 : 400, display: 'block' }}
                     >
                       {bags >= 7 && '⚠ '}{bags} bag{bags !== 1 ? 's' : ''}
                     </Typography>
                   </>
                 )}
                 <Typography
-                  variant="body1"
-                  sx={{ fontWeight: 500, fontFamily: monoFont, fontSize: '0.95rem', mt: hasHistory ? 0.5 : 0 }}
+                  variant="caption"
+                  sx={{ fontWeight: 500, fontFamily: monoFont, display: 'block', mt: hasHistory ? 0.25 : 0 }}
                 >
                   Bid{' '}
                   <strong style={{ color: isDouble ? theme.palette.error.main : undefined }}>
@@ -301,17 +308,17 @@ export default function TricksView() {
                       transition: 'border-color 0.2s ease, background-color 0.2s ease',
                     }}
                   >
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <CardContent sx={{ p: is3Player ? 1 : 1.5, '&:last-child': { pb: is3Player ? 1 : 1.5 } }}>
                       <Box
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: 0.5,
-                          mb: nilBroken ? 0.5 : 1,
+                          mb: nilBroken ? 0.5 : 0.75,
                         }}
                       >
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        <Typography variant={is3Player ? 'body2' : 'h6'} sx={{ fontWeight: 700 }} noWrap>
                           {player.name}
                         </Typography>
                         {nilTag && (
@@ -319,8 +326,8 @@ export default function TricksView() {
                             label={nilTag}
                             size="small"
                             sx={{
-                              height: 20,
-                              fontSize: '0.6rem',
+                              height: 18,
+                              fontSize: '0.55rem',
                               fontWeight: 700,
                               bgcolor: alpha(
                                 bidData?.nilType === 'blind_nil'
@@ -341,7 +348,7 @@ export default function TricksView() {
                         <Typography
                           variant="caption"
                           color="error"
-                          sx={{ display: 'block', textAlign: 'center', mb: 0.75, fontWeight: 600 }}
+                          sx={{ display: 'block', textAlign: 'center', mb: 0.5, fontWeight: 600 }}
                         >
                           Nil broken!
                         </Typography>
@@ -352,27 +359,27 @@ export default function TricksView() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 1,
+                          gap: is3Player ? 0.5 : 1,
                         }}
                       >
                         <IconButton
                           onClick={() => { haptic('light'); updateTricks(player.id, -1); }}
                           disabled={trickCount <= 0}
                           sx={{
-                            width: 48,
-                            height: 48,
+                            width: btnSize,
+                            height: btnSize,
                             bgcolor: alpha(theme.palette.primary.main, 0.1),
                             borderRadius: 2,
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                           }}
                         >
-                          <RemoveIcon />
+                          <RemoveIcon fontSize={is3Player ? 'small' : 'medium'} />
                         </IconButton>
                         <Typography
-                          variant="h4"
+                          variant={is3Player ? 'h5' : 'h4'}
                           sx={{
                             fontWeight: 900,
-                            minWidth: 40,
+                            minWidth: is3Player ? 28 : 40,
                             textAlign: 'center',
                             fontFamily: monoFont,
                             color: nilBroken ? theme.palette.error.main : undefined,
@@ -384,14 +391,14 @@ export default function TricksView() {
                           onClick={() => { haptic('light'); updateTricks(player.id, 1); }}
                           disabled={totalTricks >= tricksPerRound}
                           sx={{
-                            width: 48,
-                            height: 48,
+                            width: btnSize,
+                            height: btnSize,
                             bgcolor: alpha(theme.palette.primary.main, 0.1),
                             borderRadius: 2,
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                           }}
                         >
-                          <AddIcon />
+                          <AddIcon fontSize={is3Player ? 'small' : 'medium'} />
                         </IconButton>
                       </Box>
 
