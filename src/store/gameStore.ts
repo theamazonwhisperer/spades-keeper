@@ -567,10 +567,16 @@ export const useGameStore = create<GameStore>()(
         const game = get().currentGame;
         if (!game || game.phase !== 'scoring') return;
 
+        // Trim round notes on commit, not on every keystroke
+        const rounds = game.rounds.map(r =>
+          r.note !== undefined ? { ...r, note: r.note.trim() || undefined } : r
+        );
+
         // currentRound was already advanced by submitTricks — just switch phase
         set({
           currentGame: {
             ...game,
+            rounds,
             phase: 'bidding' as GamePhase,
           },
         });
@@ -583,7 +589,7 @@ export const useGameStore = create<GameStore>()(
           currentGame: {
             ...game,
             rounds: game.rounds.map(r =>
-              r.roundNumber === roundNumber ? { ...r, note: note.trim() || undefined } : r
+              r.roundNumber === roundNumber ? { ...r, note: note || undefined } : r
             ),
           },
         });
