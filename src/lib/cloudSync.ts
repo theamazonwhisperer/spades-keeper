@@ -49,6 +49,17 @@ export async function loadCloudState(userId: string): Promise<SyncableState | nu
 
 /** Save game state to Supabase for the current user */
 async function saveCloudState(userId: string, state: SyncableState): Promise<void> {
+  // Validate before saving to prevent corruption at the source
+  if (!isGameStateValid(state.currentGame)) {
+    const localGame = state.currentGame as any;
+    await logError('cloud_state_save_rejected_corruption', 'Preventing save of corrupted game state', {
+      roundCount: localGame?.rounds?.length ?? 0,
+      phase: localGame?.phase,
+      reason: 'game state validation failed',
+    });
+    return;
+  }
+
   const { error } = await supabase
     .from('spades_user_data')
     .upsert(
@@ -62,9 +73,53 @@ async function saveCloudState(userId: string, state: SyncableState): Promise<voi
   }
 }
 
-/** Apply cloud state to the local Zustand store */
+/** Validate game state to detect corruption (e.g., missing rounds) */
+function isGameStateValid(game: unknown): boolean {
+  if (!game || typeof game !== 'object') return true; // null/undefined is valid (no active game)
+
+  const g = game as any;
+  if (!Array.isArray(g.rounds)) return false;
+  if (!Array.isArray(g.teams)) return false;
+  if (!Array.isArray(g.players)) return false;
+  if (typeof g.phase !== 'string') return false;
+
+  // Check for suspiciously incomplete games:
+  // If game is marked complete but has very few rounds (likely corruption)
+  if (g.phase === 'complete' && g.rounds.length < 2) {
+    return false;
+  }
+
+  // All rounds should have complete/incomplete status
+  if (!g.rounds.every((r: any) => typeof r.isComplete === 'boolean')) {
+    return false;
+  }
+
+  return true;
+}
+
+/** Apply cloud state to the local Zustand store, with validation against corruption */
 export function applyCloudState(cloud: SyncableState) {
   try {
+    // Validate that the cloud state doesn't look corrupted
+    if (!isGameStateValid(cloud.currentGame)) {
+      const localState = useGameStore.getState();
+      const localGame = localState.currentGame;
+      const localRoundCount = localGame?.rounds?.length ?? 0;
+      const cloudRoundCount = (cloud.currentGame as any)?.rounds?.length ?? 0;
+      const cloudPhase = (cloud.currentGame as any)?.phase;
+
+      logError('cloud_state_rejected_corruption', 'Cloud game state appears corrupted', {
+        cloudRounds: cloudRoundCount,
+        cloudPhase,
+        localRounds: localRoundCount,
+        localPhase: localGame?.phase,
+        reason: 'completed game with suspiciously few rounds',
+      });
+
+      // Don't apply corrupted state — keep local state
+      return;
+    }
+
     useGameStore.setState({
       currentGame: cloud.currentGame as ReturnType<typeof useGameStore.getState>['currentGame'],
       savedGames: cloud.savedGames as ReturnType<typeof useGameStore.getState>['savedGames'],
