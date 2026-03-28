@@ -1,8 +1,10 @@
-import { supabase } from './supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from './supabase';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
 import { logError } from '../utils/logError';
 import type { PlayerLink, UserProfile, Game, SpectatorInfo } from '../types';
+
+// ─── Types ──────────────────────────────────────────────────
 
 // The shape of game state we sync to the cloud
 export interface SyncableState {
@@ -14,7 +16,10 @@ export interface SyncableState {
   savedPlayerNames: string[];
   defaultSettings: unknown;
   darkMode: boolean;
+  updatedAt?: string; // ISO timestamp — set on every cloud save
 }
+
+// ─── Helpers ────────────────────────────────────────────────
 
 /** Extract the syncable portion of game state */
 function getSyncableState(): SyncableState {
@@ -30,6 +35,96 @@ function getSyncableState(): SyncableState {
     darkMode: s.darkMode,
   };
 }
+
+/** Count completed rounds in a game object */
+function countCompletedRounds(game: unknown): number {
+  if (!game || typeof game !== 'object') return 0;
+  const g = game as { rounds?: { isComplete?: boolean }[] };
+  return g.rounds?.filter(r => r.isComplete)?.length ?? 0;
+}
+
+/** Get the game ID from a game object (for deduplication) */
+function getGameId(game: unknown): string | null {
+  if (!game || typeof game !== 'object') return null;
+  return (game as { id?: string }).id ?? null;
+}
+
+/** Compute a "data weight" score — higher means more data to preserve */
+function computeDataWeight(state: SyncableState): number {
+  return (
+    countCompletedRounds(state.currentGame) * 100 + // active game rounds are most important
+    (state.completedGames?.length ?? 0) * 50 +
+    (state.savedGames?.length ?? 0) * 50 +
+    (state.deletedGames?.length ?? 0) * 5 +
+    Object.keys(state.playerStats ?? {}).length * 2 +
+    (state.savedPlayerNames?.length ?? 0)
+  );
+}
+
+// ─── Cloud Save (with retry) ────────────────────────────────
+
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 2000, 4000]; // exponential backoff
+
+/** Save game state to Supabase with automatic retry on failure */
+async function saveCloudState(userId: string, state: SyncableState): Promise<boolean> {
+  const stamped: SyncableState = { ...state, updatedAt: new Date().toISOString() };
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const { error } = await supabase
+      .from('spades_user_data')
+      .upsert(
+        { user_id: userId, game_state: stamped },
+        { onConflict: 'user_id' }
+      );
+
+    if (!error) {
+      // Track last successful save timestamp locally
+      lastConfirmedSaveAt = stamped.updatedAt!;
+      return true;
+    }
+
+    console.error(`Cloud sync save failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, error.message);
+
+    if (attempt < MAX_RETRIES) {
+      await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+    } else {
+      // All retries exhausted — log and queue for next opportunity
+      await logError('cloud_sync_save_exhausted', error.message, {
+        userId,
+        attempts: attempt + 1,
+        rounds: countCompletedRounds(state.currentGame),
+      });
+      pendingFailedSave = { userId, state: stamped };
+    }
+  }
+  return false;
+}
+
+/** Track failed saves so they can be retried on next opportunity */
+let pendingFailedSave: { userId: string; state: SyncableState } | null = null;
+
+/** Timestamp of last confirmed successful save */
+let lastConfirmedSaveAt: string | null = null;
+
+/** Retry any previously failed save — called on visibility change, debounce, etc. */
+async function retryFailedSave(): Promise<void> {
+  if (!pendingFailedSave) return;
+  const { userId, state } = pendingFailedSave;
+  // Only retry if the pending state is still the most recent
+  // (if a newer save succeeded, the failed one is obsolete)
+  const currentState = getSyncableState();
+  if (computeDataWeight(currentState) > computeDataWeight(state)) {
+    // Current state is more complete — save that instead
+    pendingFailedSave = null;
+    await saveCloudState(userId, currentState);
+  } else {
+    pendingFailedSave = null;
+    await saveCloudState(userId, state);
+  }
+}
+
+// ─── Cloud Load ─────────────────────────────────────────────
 
 /** Load game state from Supabase for the current user */
 export async function loadCloudState(userId: string): Promise<SyncableState | null> {
@@ -47,24 +142,79 @@ export async function loadCloudState(userId: string): Promise<SyncableState | nu
   return data.game_state as SyncableState;
 }
 
-/** Save game state to Supabase for the current user */
-async function saveCloudState(userId: string, state: SyncableState): Promise<void> {
-  const { error } = await supabase
-    .from('spades_user_data')
-    .upsert(
-      { user_id: userId, game_state: state },
-      { onConflict: 'user_id' }
-    );
+// ─── Conflict Resolution ────────────────────────────────────
 
-  if (error) {
-    console.error('Cloud sync save failed:', error.message);
-    await logError('cloud_sync_save', error.message, { userId });
+/**
+ * Determine whether cloud state should replace local state.
+ *
+ * Strategy (in priority order):
+ *   1. If the active game is the SAME game (same ID), keep the one with more
+ *      completed rounds — that's the most up-to-date version.
+ *   2. If the active games differ, use overall data weight to decide.
+ *   3. If cloud has an updatedAt timestamp newer than our last confirmed save,
+ *      prefer cloud (it was saved more recently by this or another session).
+ *   4. Default: accept cloud on first load (local may be from an older session).
+ */
+function shouldApplyCloud(local: SyncableState, cloud: SyncableState): boolean {
+  const localRounds = countCompletedRounds(local.currentGame);
+  const cloudRounds = countCompletedRounds(cloud.currentGame);
+  const localGameId = getGameId(local.currentGame);
+  const cloudGameId = getGameId(cloud.currentGame);
+
+  // Same active game — compare round counts directly
+  if (localGameId && cloudGameId && localGameId === cloudGameId) {
+    if (localRounds > cloudRounds) {
+      logConflict('same_game_local_ahead', { localRounds, cloudRounds, gameId: localGameId });
+      return false;
+    }
+    // Cloud has equal or more rounds — accept cloud
+    return true;
   }
+
+  // Different active games or one is null — use data weight
+  const localWeight = computeDataWeight(local);
+  const cloudWeight = computeDataWeight(cloud);
+
+  // If local has significantly more data and cloud doesn't have a newer timestamp
+  if (localWeight > cloudWeight) {
+    // Check if cloud is genuinely newer (saved after our last confirmed save)
+    if (cloud.updatedAt && lastConfirmedSaveAt && cloud.updatedAt > lastConfirmedSaveAt) {
+      // Cloud is more recent even though it has less weight — this could be
+      // a legitimate state change (e.g. game was completed and cleared).
+      // Accept cloud.
+      return true;
+    }
+
+    // Cloud has less data and isn't newer — local wins
+    if (localRounds > 0 || (local.completedGames?.length ?? 0) > (cloud.completedGames?.length ?? 0)) {
+      logConflict('local_heavier', { localWeight, cloudWeight, localRounds, cloudRounds });
+      return false;
+    }
+  }
+
+  // Default: accept cloud
+  return true;
 }
 
-/** Apply cloud state to the local Zustand store */
+function logConflict(reason: string, details: Record<string, unknown>): void {
+  console.warn(`Cloud sync conflict [${reason}]:`, details, '— keeping local state');
+  logError('cloud_state_conflict', reason, details);
+}
+
+/** Apply cloud state to the local Zustand store (with conflict resolution) */
 export function applyCloudState(cloud: SyncableState) {
   try {
+    const local = getSyncableState();
+
+    if (!shouldApplyCloud(local, cloud)) {
+      // Local is authoritative — push it back to cloud to fix stale data
+      const user = useAuthStore.getState().user;
+      if (user) {
+        saveCloudState(editingForUserId ?? user.id, local);
+      }
+      return;
+    }
+
     useGameStore.setState({
       currentGame: cloud.currentGame as ReturnType<typeof useGameStore.getState>['currentGame'],
       savedGames: cloud.savedGames as ReturnType<typeof useGameStore.getState>['savedGames'],
@@ -75,10 +225,15 @@ export function applyCloudState(cloud: SyncableState) {
       defaultSettings: (cloud.defaultSettings as ReturnType<typeof useGameStore.getState>['defaultSettings']) ?? useGameStore.getState().defaultSettings,
       darkMode: cloud.darkMode,
     });
+
+    // Track that we accepted this cloud state's timestamp
+    if (cloud.updatedAt) lastConfirmedSaveAt = cloud.updatedAt;
   } catch (e) {
     logError('cloud_state_apply', e, { hasCurrentGame: !!cloud.currentGame, completedCount: cloud.completedGames?.length });
   }
 }
+
+// ─── Sharing ────────────────────────────────────────────────
 
 /** Toggle sharing_enabled flag on the user's row */
 export async function setSharingEnabled(userId: string, enabled: boolean): Promise<void> {
@@ -134,6 +289,8 @@ export function subscribeToSharedGame(
   };
 }
 
+// ─── Cloud Sync Engine ──────────────────────────────────────
+
 // When set, cloud saves target this user ID instead of the signed-in user (editor mode)
 let editingForUserId: string | null = null;
 
@@ -141,10 +298,40 @@ export function setEditingForUser(userId: string | null) {
   editingForUserId = userId;
 }
 
-// Debounced auto-save subscription
+// Debounced auto-save
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Immediately save to cloud, bypassing the debounce timer. */
+// Prevent concurrent saves from racing
+let saveInFlight = false;
+let saveQueued = false;
+
+async function enqueueSave(userId: string): Promise<void> {
+  if (saveInFlight) {
+    // A save is already running — queue another one for when it finishes
+    saveQueued = true;
+    return;
+  }
+
+  saveInFlight = true;
+  try {
+    await saveCloudState(userId, getSyncableState());
+  } finally {
+    saveInFlight = false;
+  }
+
+  // If another save was queued while we were saving, run it now
+  // (it will capture the latest state via getSyncableState)
+  if (saveQueued) {
+    saveQueued = false;
+    await enqueueSave(userId);
+  }
+}
+
+/**
+ * Immediately save to cloud, bypassing the debounce timer.
+ * After saving, verifies the save succeeded by reading back the round count.
+ * If verification fails, retries the save.
+ */
 export async function immediateCloudSave(): Promise<void> {
   if (saveTimer) {
     clearTimeout(saveTimer);
@@ -152,7 +339,70 @@ export async function immediateCloudSave(): Promise<void> {
   }
   const user = useAuthStore.getState().user;
   if (!user) return;
-  await saveCloudState(editingForUserId ?? user.id, getSyncableState());
+
+  const targetId = editingForUserId ?? user.id;
+  const localState = getSyncableState();
+  const localRounds = countCompletedRounds(localState.currentGame);
+
+  await enqueueSave(targetId);
+
+  // Verification: read back from cloud and confirm the data persisted
+  try {
+    const cloud = await loadCloudState(targetId);
+    if (cloud) {
+      const cloudRounds = countCompletedRounds(cloud.currentGame);
+      if (localRounds > 0 && cloudRounds < localRounds) {
+        console.warn(
+          `Save verification failed: cloud has ${cloudRounds} rounds, local has ${localRounds}. Retrying...`
+        );
+        await logError('cloud_save_verification_failed', 'Round count mismatch after save', {
+          localRounds,
+          cloudRounds,
+          targetId,
+        });
+        // Retry with fresh state
+        await saveCloudState(targetId, getSyncableState());
+      }
+    }
+  } catch {
+    // Verification is best-effort — don't block on failure
+  }
+}
+
+/** Best-effort save using fetch+keepalive for page unload scenarios */
+function keepaliveSave(userId: string, state: SyncableState): void {
+  try {
+    const stamped = { ...state, updatedAt: new Date().toISOString() };
+    const url = `${supabaseUrl}/rest/v1/spades_user_data?on_conflict=user_id`;
+    const body = JSON.stringify({ user_id: userId, game_state: stamped });
+
+    // Get the current session access token for auth
+    const storageKey = `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+    const sessionStr = sessionStorage.getItem(storageKey)
+      || localStorage.getItem(storageKey);
+    let accessToken = supabaseAnonKey;
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        accessToken = session?.access_token || session?.currentSession?.access_token || accessToken;
+      } catch { /* use fallback */ }
+    }
+
+    // fetch with keepalive survives page unload and supports auth headers
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${accessToken}`,
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // Best effort — localStorage still has the data as fallback
+  }
 }
 
 export function startCloudSync() {
@@ -164,25 +414,49 @@ export function startCloudSync() {
     const targetId = editingForUserId ?? user.id;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      saveCloudState(targetId, getSyncableState());
+      enqueueSave(targetId);
     }, 1500); // debounce 1.5s
   });
 
   // Flush pending save when user closes/refreshes the browser
   const handleUnload = () => {
     const user = useAuthStore.getState().user;
-    if (!user || !saveTimer) return;
-    clearTimeout(saveTimer);
-    saveTimer = null;
-    // Best-effort synchronous-style save via sendBeacon isn't possible here,
-    // but we can at least trigger the async save (may not complete on hard close)
-    saveCloudState(user.id, getSyncableState());
+    if (!user) return;
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    // Use fetch+keepalive for reliable delivery during page unload
+    keepaliveSave(editingForUserId ?? user.id, getSyncableState());
   };
+
+  // Save eagerly when app is backgrounded (critical on mobile)
+  const handleVisibilityChange = () => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+    const targetId = editingForUserId ?? user.id;
+
+    if (document.visibilityState === 'hidden') {
+      // Flush any pending debounce immediately
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      // Use keepalive save (more reliable than async when being backgrounded)
+      keepaliveSave(targetId, getSyncableState());
+    } else {
+      // App came back to foreground — retry any failed saves
+      retryFailedSave();
+    }
+  };
+
   window.addEventListener('beforeunload', handleUnload);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 
   return () => {
     unsubscribe();
     window.removeEventListener('beforeunload', handleUnload);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
 }
 
