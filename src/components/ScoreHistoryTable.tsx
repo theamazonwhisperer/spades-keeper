@@ -162,7 +162,7 @@ export default function ScoreHistoryTable({ game, onEditRound }: Props) {
                       sx={{ ...cellSx, color: theme.palette.error.main, fontWeight: 700 }}
                       align="center"
                     >
-                      {ts?.cumulativeBags ?? 0}
+                      {(ts?.cumulativeBags ?? 0) % 10}
                     </TableCell>
                   </>
                 );

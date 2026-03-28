@@ -167,7 +167,7 @@ export function getLatestTeamScore(
   if (completedRounds.length === 0) return { score: 0, bags: 0 };
   const last = completedRounds[completedRounds.length - 1];
   const ts = last.teamScores.find(s => s.teamId === teamId);
-  return { score: ts?.cumulativeScore ?? 0, bags: ts?.cumulativeBags ?? 0 };
+  return { score: ts?.cumulativeScore ?? 0, bags: (ts?.cumulativeBags ?? 0) % 10 };
 }
 
 export function formatScore(score: number): string {
