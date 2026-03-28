@@ -259,7 +259,7 @@ export default function ScoringView() {
                   {/* Bag penalty */}
                   {ts.bagPenalty > 0 && (
                     <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, fontFamily: monoFont }}>
-                      Bag penalty: -{ts.bagPenalty} ({ts.cumulativeBags} bags total)
+                      Bag penalty: -{ts.bagPenalty} ({ts.cumulativeBags % 10} bag{ts.cumulativeBags % 10 !== 1 ? 's' : ''} carried over)
                     </Typography>
                   )}
 
