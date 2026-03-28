@@ -27,26 +27,34 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     init();
   }, [init]);
 
-  useEffect(() => {
-    if (!user) return;
+  // Track the user ID so we only run cloud sync setup when the actual user
+  // changes (sign-in / sign-out), NOT on Supabase token refreshes which create
+  // a new user object reference with the same id.
+  const userId = user?.id;
 
+  useEffect(() => {
+    if (!userId) return;
+
+    let cancelled = false;
     let unsubscribe: (() => void) | undefined;
 
     (async () => {
       setSyncing(true);
       try {
-        const cloud = await loadCloudState(user.id);
-        if (cloud) {
+        const cloud = await loadCloudState(userId);
+        if (cloud && !cancelled) {
           applyCloudState(cloud);
         }
       } catch (e) {
         console.error('Failed to load cloud state:', e);
       }
 
+      if (cancelled) return;
+
       // Import shared games from linked players
       try {
-        const sharedGames = await loadSharedGames(user.id);
-        if (sharedGames.length > 0) {
+        const sharedGames = await loadSharedGames(userId);
+        if (sharedGames.length > 0 && !cancelled) {
           const { completedGames, importGame } = useGameStore.getState();
           const existingIds = new Set(completedGames.map(g => g.id));
           const newGames = sharedGames.filter(g => !existingIds.has(g.id));
@@ -55,20 +63,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
             setSharedSnack(`${newGames.length} game${newGames.length > 1 ? 's' : ''} added from linked players`);
           }
           // Clear consumed shared games
-          await clearSharedGames(user.id, sharedGames.map(g => g.id));
+          await clearSharedGames(userId, sharedGames.map(g => g.id));
         }
       } catch (e) {
         console.error('Failed to load shared games:', e);
       }
 
+      if (cancelled) return;
       setSyncing(false);
       unsubscribe = startCloudSync();
     })();
 
     return () => {
+      cancelled = true;
       unsubscribe?.();
     };
-  }, [user]);
+  }, [userId]);
 
   const isAuthenticated = !!user || isGuest;
 
