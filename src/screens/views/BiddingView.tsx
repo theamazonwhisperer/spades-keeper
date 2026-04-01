@@ -18,6 +18,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Snackbar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -28,6 +29,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import ShareIcon from '@mui/icons-material/Share';
+import LinkIcon from '@mui/icons-material/Link';
 import PeopleIcon from '@mui/icons-material/People';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
@@ -59,6 +61,7 @@ export default function BiddingView() {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [endGameOpen, setEndGameOpen] = useState(false);
   const [spectatorOpen, setSpectatorOpen] = useState(false);
+  const [snackMsg, setSnackMsg] = useState('');
 
   // Initialize from existing round data if we came back via Fix Bids
   const [bids, setBids] = useState<Record<string, BidState>>(() => {
@@ -202,6 +205,24 @@ export default function BiddingView() {
           <ListItemIcon><ShareIcon fontSize="small" /></ListItemIcon>
           <ListItemText>Share Scorecard</ListItemText>
         </MenuItem>
+        {user && currentGame && (
+          <MenuItem
+            onClick={async () => {
+              setMenuAnchor(null);
+              const url = `${window.location.origin}/import-game/${user.id}/${currentGame.id}`;
+              try {
+                await navigator.clipboard.writeText(url);
+                setSnackMsg('Game link copied!');
+              } catch {
+                setSnackMsg(url);
+              }
+              haptic('light');
+            }}
+          >
+            <ListItemIcon><LinkIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>Share Link</ListItemText>
+          </MenuItem>
+        )}
         {user && (
           <MenuItem onClick={() => { setMenuAnchor(null); setSpectatorOpen(true); }}>
             <ListItemIcon><PeopleIcon fontSize="small" /></ListItemIcon>
@@ -459,6 +480,7 @@ export default function BiddingView() {
       <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <EndGameDialog externalOpen={endGameOpen} onExternalClose={() => setEndGameOpen(false)} />
       <SpectatorListDialog open={spectatorOpen} onClose={() => setSpectatorOpen(false)} />
+      <Snackbar open={!!snackMsg} autoHideDuration={3000} onClose={() => setSnackMsg('')} message={snackMsg} />
     </Box>
   );
 }
