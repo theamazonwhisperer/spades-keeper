@@ -48,16 +48,16 @@ function pickRandom(arr: string[]): string {
 }
 
 function getRoastTier(ts: TeamRoundScore, maxOpponentScore: number): RoastTier | null {
-  // Savage: cumulative score deeply negative
+  // Savage: cumulative score deeply negative — every round until they climb out
   if (ts.cumulativeScore <= -100) return 'savage';
 
-  // Medium: score is negative
+  // Medium: in the negatives — every round until they climb out
   if (ts.cumulativeScore < 0) return 'medium';
 
   // Mild: lost points this round
   if (ts.roundTotal < 0) return 'mild';
 
-  // Mild: significantly behind the leading team (100+ points)
+  // Mild: way behind the leading team (100+ points)
   if (maxOpponentScore - ts.cumulativeScore >= 100) return 'mild';
 
   return null;
