@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -61,21 +61,17 @@ export default function ScoringView() {
   const completedRounds = currentGame.rounds.filter(r => r.isComplete);
   const latestRound = completedRounds[completedRounds.length - 1];
 
-  const roasts = useMemo(() => {
-    if (!latestRound) return [];
-    const teamPlayerNames = new Map(
-      currentGame.teams.map(t => [
-        t.id,
-        currentGame.players
-          .filter(p => p.teamIndex === currentGame.teams.indexOf(t))
-          .map(p => p.name),
-      ])
-    );
-    return generateRoasts(latestRound.teamScores, teamPlayerNames);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [latestRound?.roundNumber]);
-
   if (!latestRound) return null;
+
+  const teamPlayerNames = new Map(
+    currentGame.teams.map(t => [
+      t.id,
+      currentGame.players
+        .filter(p => p.teamIndex === currentGame.teams.indexOf(t))
+        .map(p => p.name),
+    ])
+  );
+  const roasts = generateRoasts(latestRound.teamScores, teamPlayerNames);
 
   const handleCopyLiveLink = async () => {
     setMenuAnchor(null);
