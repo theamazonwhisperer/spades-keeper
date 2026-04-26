@@ -47,15 +47,18 @@ function pickRandom(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function getRoastTier(ts: TeamRoundScore): RoastTier | null {
+function getRoastTier(ts: TeamRoundScore, maxOpponentScore: number): RoastTier | null {
   // Savage: cumulative score deeply negative
   if (ts.cumulativeScore <= -100) return 'savage';
 
-  // Medium: just crossed into negative territory
+  // Medium: score is negative
   if (ts.cumulativeScore < 0) return 'medium';
 
-  // Mild: lost points this round (negative round total)
+  // Mild: lost points this round
   if (ts.roundTotal < 0) return 'mild';
+
+  // Mild: significantly behind the leading team (100+ points)
+  if (maxOpponentScore - ts.cumulativeScore >= 100) return 'mild';
 
   return null;
 }
@@ -75,9 +78,10 @@ export function generateRoasts(
   teamPlayerNames: Map<string, string[]>
 ): Roast[] {
   const roasts: Roast[] = [];
+  const maxScore = Math.max(...teamScores.map(ts => ts.cumulativeScore));
 
   for (const ts of teamScores) {
-    const tier = getRoastTier(ts);
+    const tier = getRoastTier(ts, maxScore);
     if (!tier) continue;
 
     const playerNames = teamPlayerNames.get(ts.teamId);
