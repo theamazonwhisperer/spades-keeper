@@ -27,7 +27,7 @@ const MEDIUM_ROASTS = [
 
 const SAVAGE_ROASTS = [
   '{names}, maybe you should just give up now?',
-  "{names}, I think mother's calling. She says you're embarrassing yourself and that it's past your bedtime.",
+  "{names}, I think mother's calling. She says you're embarrassing yourself and it's past your bedtime.",
   "{names}, at this point you're not losing — you're donating.",
   "{names}, this isn't a game anymore, it's a charity event for the other team.",
   '{names}, respectfully... have you considered a different hobby?',
