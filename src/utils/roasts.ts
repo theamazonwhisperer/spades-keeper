@@ -6,6 +6,11 @@ const MILD_ROASTS = [
   '{names}, the other team thanks you for your service.',
   "{names}, at least you're consistent. Consistently bad.",
   "{names}, bold strategy. Let's see if it pays off. (It won't.)",
+  '{names}, come on now, this is just getting childish. Pull yourselves together.',
+  '{names}, are you even trying?',
+  '{names}, have you played this game before?',
+  "{names}, I'd say it can only get better from here, but I don't want to lie.",
+  "{names}, at least you're having fun... right? Right?",
 ];
 
 const MEDIUM_ROASTS = [
@@ -13,6 +18,11 @@ const MEDIUM_ROASTS = [
   '{names}, seriously... what are you guys even doing?',
   "{names}, just fyi — the cards aren't the problem. It's the people holding them.",
   "{names}, even a broken clock is right twice a day. You're overdue.",
+  "{names}, would a calculator help? Or maybe an abacus?",
+  "{names}, plot twist: you're supposed to win tricks, not give them away.",
+  "{names}, I've run the numbers. It's not looking good.",
+  "{names}, fun fact: negative scores aren't a high score.",
+  "{names}, you're making the other team look like professionals.",
 ];
 
 const SAVAGE_ROASTS = [
@@ -21,6 +31,10 @@ const SAVAGE_ROASTS = [
   "{names}, at this point you're not losing — you're donating.",
   "{names}, this isn't a game anymore, it's a charity event for the other team.",
   '{names}, respectfully... have you considered a different hobby?',
+  "{names}, this is painful to watch. And I'm just an app.",
+  "{names}, your grandmother called. Even she's disappointed.",
+  "{names}, you couldn't win a game of Go Fish right now.",
+  "{names}, I'd offer advice, but I don't think it would help.",
 ];
 
 const ROAST_MAP: Record<RoastTier, string[]> = {
