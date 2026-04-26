@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -42,6 +42,7 @@ import GameSettingsDialog from '../../components/GameSettingsDialog';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import { monoFont } from '../../theme';
 import { haptic } from '../../utils/haptic';
+import { generateRoasts } from '../../utils/roasts';
 
 export default function ScoringView() {
   const theme = useTheme();
@@ -59,6 +60,21 @@ export default function ScoringView() {
 
   const completedRounds = currentGame.rounds.filter(r => r.isComplete);
   const latestRound = completedRounds[completedRounds.length - 1];
+
+  const roasts = useMemo(() => {
+    if (!latestRound) return [];
+    const teamPlayerNames = new Map(
+      currentGame.teams.map(t => [
+        t.id,
+        currentGame.players
+          .filter(p => p.teamIndex === currentGame.teams.indexOf(t))
+          .map(p => p.name),
+      ])
+    );
+    return generateRoasts(latestRound.teamScores, teamPlayerNames);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestRound?.roundNumber]);
+
   if (!latestRound) return null;
 
   const handleCopyLiveLink = async () => {
@@ -295,6 +311,51 @@ export default function ScoringView() {
             );
           })}
         </Box>
+
+        {/* Roasts for struggling teams */}
+        {roasts.map(roast => (
+          <Box
+            key={roast.teamId}
+            className="animate-scale-in"
+            sx={{
+              mb: 2,
+              px: 2,
+              py: 1.5,
+              borderRadius: 2,
+              bgcolor: alpha(
+                roast.tier === 'savage'
+                  ? theme.palette.error.main
+                  : roast.tier === 'medium'
+                    ? theme.palette.warning.main
+                    : theme.palette.info.main,
+                0.1
+              ),
+              border: `1px solid ${alpha(
+                roast.tier === 'savage'
+                  ? theme.palette.error.main
+                  : roast.tier === 'medium'
+                    ? theme.palette.warning.main
+                    : theme.palette.info.main,
+                0.25
+              )}`,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                fontStyle: 'italic',
+                fontWeight: 500,
+                color: roast.tier === 'savage'
+                  ? 'error.main'
+                  : roast.tier === 'medium'
+                    ? 'warning.main'
+                    : 'info.main',
+              }}
+            >
+              {roast.message}
+            </Typography>
+          </Box>
+        ))}
 
         {/* Score history */}
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.25 }}>
