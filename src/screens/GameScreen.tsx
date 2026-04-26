@@ -16,11 +16,11 @@ export default function GameScreen() {
 
   switch (currentGame.phase) {
     case 'bidding':
-      return <BiddingView />;
+      return <BiddingView key={`bid-${currentGame.currentRound}`} />;
     case 'tricks':
-      return <TricksView />;
+      return <TricksView key={`tricks-${currentGame.currentRound}`} />;
     case 'scoring':
-      return <ScoringView />;
+      return <ScoringView key={`score-${currentGame.currentRound}`} />;
     case 'complete':
       return <GameOverView />;
     default:
