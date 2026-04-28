@@ -242,7 +242,7 @@ export default function HomeScreen() {
       )}
 
       {/* Saved Games */}
-      {savedGames.length > 0 && (
+      {savedGames.filter(g => g.phase !== 'complete').length > 0 && (
         <Box className="animate-slide-up" sx={{ mb: 3, animationDelay: '175ms' }}>
           <Typography
             variant="subtitle2"
@@ -252,7 +252,7 @@ export default function HomeScreen() {
             Saved Games
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {savedGames.map(game => (
+            {savedGames.filter(g => g.phase !== 'complete').map(game => (
               <Box key={game.id} sx={{ position: 'relative' }}>
                 <GameCard
                   game={game}
