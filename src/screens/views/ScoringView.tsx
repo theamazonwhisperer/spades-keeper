@@ -71,7 +71,7 @@ export default function ScoringView() {
         .map(p => p.name),
     ])
   );
-  const roasts = generateRoasts(latestRound.teamScores, teamPlayerNames);
+  const roasts = generateRoasts(currentGame.id, latestRound.teamScores, teamPlayerNames);
 
   const handleCopyLiveLink = async () => {
     setMenuAnchor(null);

@@ -43,8 +43,30 @@ const ROAST_MAP: Record<RoastTier, string[]> = {
   savage: SAVAGE_ROASTS,
 };
 
-function pickRandom(arr: string[]): string {
-  return arr[Math.floor(Math.random() * arr.length)];
+// Track used roasts per game+team so we never repeat within a game.
+// Key: "gameId:teamId", Value: set of used template strings.
+const usedRoasts = new Map<string, Set<string>>();
+
+function pickUnused(arr: string[], key: string): string {
+  let used = usedRoasts.get(key);
+  if (!used) {
+    used = new Set();
+    usedRoasts.set(key, used);
+  }
+
+  const available = arr.filter(t => !used.has(t));
+  // If all exhausted, reset and start fresh
+  const pool = available.length > 0 ? available : arr;
+  if (available.length === 0) used.clear();
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  used.add(pick);
+  return pick;
+}
+
+/** Clear roast history (call when a new game starts) */
+export function resetRoastHistory(): void {
+  usedRoasts.clear();
 }
 
 function getRoastTier(ts: TeamRoundScore, maxOpponentScore: number): RoastTier | null {
@@ -74,6 +96,7 @@ export interface Roast {
  * Returns one roast per qualifying team (or empty array if everyone is doing fine).
  */
 export function generateRoasts(
+  gameId: string,
   teamScores: TeamRoundScore[],
   teamPlayerNames: Map<string, string[]>
 ): Roast[] {
@@ -87,8 +110,9 @@ export function generateRoasts(
     const playerNames = teamPlayerNames.get(ts.teamId);
     if (!playerNames || playerNames.length === 0) continue;
 
+    const key = `${gameId}:${ts.teamId}:${tier}`;
     const names = playerNames.join(' & ');
-    const template = pickRandom(ROAST_MAP[tier]);
+    const template = pickUnused(ROAST_MAP[tier], key);
     const message = template.replace('{names}', names);
 
     roasts.push({ teamId: ts.teamId, message, tier });
