@@ -71,7 +71,8 @@ export default function ScoringView() {
         .map(p => p.name),
     ])
   );
-  const roasts = generateRoasts(latestRound.teamScores, teamPlayerNames);
+  const is4Player = currentGame.settings.playerMode === '4-player';
+  const roasts = generateRoasts(currentGame.id, latestRound.teamScores, teamPlayerNames, is4Player);
 
   const handleCopyLiveLink = async () => {
     setMenuAnchor(null);
