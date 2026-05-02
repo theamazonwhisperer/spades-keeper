@@ -11,6 +11,11 @@ const MILD_ROASTS = [
   '{names}, have you played this game before?',
   "{names}, I'd say it can only get better from here, but I don't want to lie.",
   "{names}, at least you're having fun... right? Right?",
+  '{names}, was there really strategy behind that? I doubt it.',
+  '{names}, you do realise the other team can see you, right?',
+  "{names}, I've seen better decisions made by a coin flip.",
+  '{names}, were you even looking at your cards?',
+  '{names}, that round looked like you were playing different games.',
 ];
 
 const MEDIUM_ROASTS = [
@@ -23,6 +28,15 @@ const MEDIUM_ROASTS = [
   "{names}, I've run the numbers. It's not looking good.",
   "{names}, fun fact: negative scores aren't a high score.",
   "{names}, you're making the other team look like professionals.",
+  "{names}, if this were a job, you'd be fired.",
+  '{names}, this is what happens when confidence exceeds ability.',
+  "{names}, the only thing you're winning right now is sympathy.",
+  "{names}, I keep waiting for the turning point. I'll keep waiting.",
+];
+
+// This one only applies to 4-player games (2v2 with a partner to blame)
+const MEDIUM_ROASTS_4P = [
+  '{names}, at what point do you start blaming each other?',
 ];
 
 const SAVAGE_ROASTS = [
@@ -35,38 +49,43 @@ const SAVAGE_ROASTS = [
   "{names}, your grandmother called. Even she's disappointed.",
   "{names}, you couldn't win a game of Go Fish right now.",
   "{names}, I'd offer advice, but I don't think it would help.",
+  "{names}, congratulations, you've invented a new way to lose.",
+  "{names}, I'd call this rock bottom, but you'd probably find a way to go lower.",
+  "{names}, the cards aren't even your biggest problem at this point.",
+  '{names}, if Spades was a participation sport, you\'d still be losing.',
+  "{names}, I've been programmed to be supportive, but you're making it really difficult.",
+  '{names}, the other team could play blindfolded at this point.',
+  "{names}, I want to say something encouraging but I genuinely can't think of anything.",
 ];
 
-const ROAST_MAP: Record<RoastTier, string[]> = {
-  mild: MILD_ROASTS,
-  medium: MEDIUM_ROASTS,
-  savage: SAVAGE_ROASTS,
-};
-
-// Track used roasts per game+team so we never repeat within a game.
-// Key: "gameId:teamId", Value: set of used template strings.
-const usedRoasts = new Map<string, Set<string>>();
-
-function pickUnused(arr: string[], key: string): string {
-  let used = usedRoasts.get(key);
-  if (!used) {
-    used = new Set();
-    usedRoasts.set(key, used);
+/**
+ * Shuffle an array using Fisher-Yates. Returns a new array.
+ */
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
+  return copy;
+}
 
-  const available = arr.filter(t => !used.has(t));
-  // If all exhausted, reset and start fresh
-  const pool = available.length > 0 ? available : arr;
-  if (available.length === 0) used.clear();
+// Pre-shuffled queues per game+team+tier. Each queue is a shuffled copy of
+// the tier's roast pool. We pop from the end; when empty, reshuffle.
+const roastQueues = new Map<string, string[]>();
 
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  used.add(pick);
-  return pick;
+function pickNext(pool: string[], key: string): string {
+  let queue = roastQueues.get(key);
+  if (!queue || queue.length === 0) {
+    queue = shuffle(pool);
+    roastQueues.set(key, queue);
+  }
+  return queue.pop()!;
 }
 
 /** Clear roast history (call when a new game starts) */
 export function resetRoastHistory(): void {
-  usedRoasts.clear();
+  roastQueues.clear();
 }
 
 function getRoastTier(ts: TeamRoundScore, maxOpponentScore: number): RoastTier | null {
@@ -98,7 +117,8 @@ export interface Roast {
 export function generateRoasts(
   gameId: string,
   teamScores: TeamRoundScore[],
-  teamPlayerNames: Map<string, string[]>
+  teamPlayerNames: Map<string, string[]>,
+  is4Player: boolean = true
 ): Roast[] {
   const roasts: Roast[] = [];
   const maxScore = Math.max(...teamScores.map(ts => ts.cumulativeScore));
@@ -110,9 +130,21 @@ export function generateRoasts(
     const playerNames = teamPlayerNames.get(ts.teamId);
     if (!playerNames || playerNames.length === 0) continue;
 
+    // Build the pool for this tier, including 4-player-only roasts when applicable
+    let pool: string[];
+    if (tier === 'medium' && is4Player) {
+      pool = [...MEDIUM_ROASTS, ...MEDIUM_ROASTS_4P];
+    } else if (tier === 'medium') {
+      pool = MEDIUM_ROASTS;
+    } else if (tier === 'mild') {
+      pool = MILD_ROASTS;
+    } else {
+      pool = SAVAGE_ROASTS;
+    }
+
     const key = `${gameId}:${ts.teamId}:${tier}`;
     const names = playerNames.join(' & ');
-    const template = pickUnused(ROAST_MAP[tier], key);
+    const template = pickNext(pool, key);
     const message = template.replace('{names}', names);
 
     roasts.push({ teamId: ts.teamId, message, tier });
