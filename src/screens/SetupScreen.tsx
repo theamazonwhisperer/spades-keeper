@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -30,26 +30,39 @@ export default function SetupScreen() {
   const { startGame, savedPlayerNames, defaultSettings } = useGameStore();
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
+  const [playerMode, setPlayerMode] = useState<'4-player' | '3-player'>(
+    defaultSettings.playerMode ?? '4-player'
+  );
+  const [starting, setStarting] = useState(false);
+
+  // 4-player fields
   const [teamName1, setTeamName1] = useState('');
   const [teamName2, setTeamName2] = useState('');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
   const [p3, setP3] = useState('');
   const [p4, setP4] = useState('');
+
+  // 3-player fields
+  const [s1, setS1] = useState('');
+  const [s2, setS2] = useState('');
+  const [s3, setS3] = useState('');
+
   const [winTarget, setWinTarget] = useState<200 | 300 | 500>(defaultSettings.winTarget);
   const [maxRounds, setMaxRounds] = useState<'10' | 'unlimited'>(defaultSettings.maxRounds === 10 ? '10' : 'unlimited');
   const [nilValue, setNilValue] = useState<50 | 100>(defaultSettings.nilValue);
   const [blindNilValue, setBlindNilValue] = useState<100 | 200>(defaultSettings.blindNilValue);
   const [doubleOn10, setDoubleOn10] = useState(defaultSettings.doubleOn10);
   const [failedNilCountsAsBags, setFailedNilCountsAsBags] = useState(defaultSettings.failedNilCountsAsBags);
-  const [starting, setStarting] = useState(false);
 
-  const canStart =
+  const canStart4 =
     teamName1.trim() && teamName2.trim() && p1.trim() && p2.trim() && p3.trim() && p4.trim();
+  const canStart3 = s1.trim() && s2.trim() && s3.trim();
+  const canStart = playerMode === '3-player' ? canStart3 : canStart4;
 
   const user = useAuthStore(s => s.user);
 
-  const handleStart = async () => {
+  const handleStart = useCallback(async () => {
     if (!canStart || starting) return;
     setStarting(true);
 
@@ -60,39 +73,56 @@ export default function SetupScreen() {
       blindNilValue,
       doubleOn10,
       failedNilCountsAsBags,
+      playerMode,
     };
 
-    // Look up confirmed player links for auto-linking.
-    // Race against a 4s timeout so a sleeping Supabase instance never freezes the UI.
-    let linkedUserMap: Map<string, string> | undefined;
-    if (user) {
-      const names = [p1.trim(), p2.trim(), p3.trim(), p4.trim()];
-      const timeout = new Promise<Map<string, string>>(resolve =>
-        setTimeout(() => resolve(new Map()), 4000)
-      );
-      linkedUserMap = await Promise.race([
-        getConfirmedLinksForNames(user.id, names),
-        timeout,
-      ]).catch(() => new Map());
-    }
-
-    startGame(
-      [teamName1.trim(), teamName2.trim()],
-      [
-        [p1.trim(), p2.trim()],
-        [p3.trim(), p4.trim()],
-      ],
-      settings,
-      linkedUserMap
+    const timeout = (ms: number) => new Promise<Map<string, string>>(resolve =>
+      setTimeout(() => resolve(new Map()), ms)
     );
+
+    if (playerMode === '3-player') {
+      const names = [s1.trim(), s2.trim(), s3.trim()];
+      let linkedUserMap: Map<string, string> | undefined;
+      if (user) {
+        linkedUserMap = await Promise.race([
+          getConfirmedLinksForNames(user.id, names),
+          timeout(4000),
+        ]).catch(() => new Map());
+      }
+      startGame(names, names.map(n => [n]), settings, linkedUserMap);
+    } else {
+      const names = [p1.trim(), p2.trim(), p3.trim(), p4.trim()];
+      let linkedUserMap: Map<string, string> | undefined;
+      if (user) {
+        linkedUserMap = await Promise.race([
+          getConfirmedLinksForNames(user.id, names),
+          timeout(4000),
+        ]).catch(() => new Map());
+      }
+      startGame(
+        [teamName1.trim(), teamName2.trim()],
+        [[p1.trim(), p2.trim()], [p3.trim(), p4.trim()]],
+        settings,
+        linkedUserMap
+      );
+    }
     navigate('/game');
-  };
+  }, [canStart, starting, winTarget, maxRounds, nilValue, blindNilValue, doubleOn10,
+    failedNilCountsAsBags, playerMode, s1, s2, s3, p1, p2, p3, p4, teamName1, teamName2,
+    user, startGame, navigate]);
 
   const teamCardSx = (color: string) => ({
     border: `2px solid ${alpha(color, 0.3)}`,
     bgcolor: alpha(color, 0.04),
     mb: 2,
   });
+
+  // Palette colors for the 3 solo-player cards
+  const soloColors = [
+    theme.palette.primary.main,
+    theme.palette.secondary.main,
+    theme.palette.success?.main ?? theme.palette.primary.light,
+  ];
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', pb: 6 }}>
@@ -113,109 +143,179 @@ export default function SetupScreen() {
       </AppBar>
 
       <Box className="stagger-children" sx={{ px: 2.5, pt: 1 }}>
-        {/* Team 1 */}
-        <Card sx={teamCardSx(theme.palette.primary.main)}>
-          <CardContent sx={{ p: 2 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                textTransform: 'uppercase',
-                letterSpacing: 1.5,
-                color: theme.palette.primary.main,
-                fontWeight: 700,
-                fontSize: '0.65rem',
-              }}
-            >
-              Team 1
-            </Typography>
-            <TextField
-              fullWidth
-              label="Team Name"
-              value={teamName1}
-              onChange={e => setTeamName1(e.target.value)}
-              variant="outlined"
-              size="medium"
-              sx={{ mt: 1, mb: 1.5 }}
-              placeholder="e.g. MLK"
-              inputProps={{ maxLength: 20 }}
-              inputRef={firstFieldRef}
-              autoFocus
-            />
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Autocomplete
-                freeSolo
-                fullWidth
-                options={savedPlayerNames.filter(n => n !== p2 && n !== p3 && n !== p4)}
-                inputValue={p1}
-                onInputChange={(_, v) => setP1(v)}
-                renderInput={(params) => (
-                  <TextField {...params} label="Player 1" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
-                )}
-              />
-              <Autocomplete
-                freeSolo
-                fullWidth
-                options={savedPlayerNames.filter(n => n !== p1 && n !== p3 && n !== p4)}
-                inputValue={p2}
-                onInputChange={(_, v) => setP2(v)}
-                renderInput={(params) => (
-                  <TextField {...params} label="Player 2" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
-                )}
-              />
-            </Box>
-          </CardContent>
-        </Card>
 
-        {/* Team 2 */}
-        <Card sx={teamCardSx(theme.palette.secondary.main)}>
-          <CardContent sx={{ p: 2 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                textTransform: 'uppercase',
-                letterSpacing: 1.5,
-                color: theme.palette.secondary.main,
-                fontWeight: 700,
-                fontSize: '0.65rem',
-              }}
-            >
-              Team 2
+        {/* Player mode toggle */}
+        <Box sx={{ mb: 2.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem', fontWeight: 600 }}>
+            Players
+          </Typography>
+          <ToggleButtonGroup
+            value={playerMode}
+            exclusive
+            onChange={(_, v) => v && setPlayerMode(v)}
+            fullWidth
+            size="medium"
+          >
+            <ToggleButton value="4-player">4 Players (Teams)</ToggleButton>
+            <ToggleButton value="3-player">3 Players (Solo)</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {playerMode === '4-player' ? (
+          <>
+            {/* Team 1 */}
+            <Card sx={teamCardSx(theme.palette.primary.main)}>
+              <CardContent sx={{ p: 2 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    textTransform: 'uppercase',
+                    letterSpacing: 1.5,
+                    color: theme.palette.primary.main,
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                  }}
+                >
+                  Team 1
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Team Name"
+                  value={teamName1}
+                  onChange={e => setTeamName1(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  sx={{ mt: 1, mb: 1.5 }}
+                  placeholder="e.g. MLK"
+                  inputProps={{ maxLength: 20 }}
+                  inputRef={firstFieldRef}
+                  autoFocus
+                />
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    options={savedPlayerNames.filter(n => n !== p2 && n !== p3 && n !== p4)}
+                    inputValue={p1}
+                    onInputChange={(_, v) => setP1(v)}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Player 1" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                    )}
+                  />
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    options={savedPlayerNames.filter(n => n !== p1 && n !== p3 && n !== p4)}
+                    inputValue={p2}
+                    onInputChange={(_, v) => setP2(v)}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Player 2" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                    )}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Team 2 */}
+            <Card sx={teamCardSx(theme.palette.secondary.main)}>
+              <CardContent sx={{ p: 2 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    textTransform: 'uppercase',
+                    letterSpacing: 1.5,
+                    color: theme.palette.secondary.main,
+                    fontWeight: 700,
+                    fontSize: '0.65rem',
+                  }}
+                >
+                  Team 2
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Team Name"
+                  value={teamName2}
+                  onChange={e => setTeamName2(e.target.value)}
+                  variant="outlined"
+                  size="medium"
+                  sx={{ mt: 1, mb: 1.5 }}
+                  placeholder="e.g. JFK"
+                  inputProps={{ maxLength: 20 }}
+                />
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    options={savedPlayerNames.filter(n => n !== p1 && n !== p2 && n !== p4)}
+                    inputValue={p3}
+                    onInputChange={(_, v) => setP3(v)}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Player 3" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                    )}
+                  />
+                  <Autocomplete
+                    freeSolo
+                    fullWidth
+                    options={savedPlayerNames.filter(n => n !== p1 && n !== p2 && n !== p3)}
+                    inputValue={p4}
+                    onInputChange={(_, v) => setP4(v)}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Player 4" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
+                    )}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <>
+            {/* 3-player: one card per solo player */}
+            {([s1, s2, s3] as const).map((val, idx) => {
+              const setters = [setS1, setS2, setS3];
+              const others = [s1, s2, s3].filter((_, i) => i !== idx);
+              return (
+                <Card key={idx} sx={teamCardSx(soloColors[idx])}>
+                  <CardContent sx={{ p: 2 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        textTransform: 'uppercase',
+                        letterSpacing: 1.5,
+                        color: soloColors[idx],
+                        fontWeight: 700,
+                        fontSize: '0.65rem',
+                      }}
+                    >
+                      Player {idx + 1}
+                    </Typography>
+                    <Autocomplete
+                      freeSolo
+                      fullWidth
+                      options={savedPlayerNames.filter(n => !others.includes(n))}
+                      inputValue={val}
+                      onInputChange={(_, v) => setters[idx](v)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Name"
+                          placeholder="Player name"
+                          size="medium"
+                          sx={{ mt: 1 }}
+                          inputProps={{ ...params.inputProps, maxLength: 15 }}
+                          inputRef={idx === 0 ? firstFieldRef : undefined}
+                          autoFocus={idx === 0}
+                        />
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              );
+            })}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, mt: -1 }}>
+              17 tricks per round · 2 of hearts removed · each player scores individually
             </Typography>
-            <TextField
-              fullWidth
-              label="Team Name"
-              value={teamName2}
-              onChange={e => setTeamName2(e.target.value)}
-              variant="outlined"
-              size="medium"
-              sx={{ mt: 1, mb: 1.5 }}
-              placeholder="e.g. JFK"
-              inputProps={{ maxLength: 20 }}
-            />
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Autocomplete
-                freeSolo
-                fullWidth
-                options={savedPlayerNames.filter(n => n !== p1 && n !== p2 && n !== p4)}
-                inputValue={p3}
-                onInputChange={(_, v) => setP3(v)}
-                renderInput={(params) => (
-                  <TextField {...params} label="Player 3" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
-                )}
-              />
-              <Autocomplete
-                freeSolo
-                fullWidth
-                options={savedPlayerNames.filter(n => n !== p1 && n !== p2 && n !== p3)}
-                inputValue={p4}
-                onInputChange={(_, v) => setP4(v)}
-                renderInput={(params) => (
-                  <TextField {...params} label="Player 4" placeholder="Name" size="medium" inputProps={{ ...params.inputProps, maxLength: 15 }} />
-                )}
-              />
-            </Box>
-          </CardContent>
-        </Card>
+          </>
+        )}
 
         <Divider sx={{ my: 2 }} />
 

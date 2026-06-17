@@ -31,7 +31,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useAuthStore } from '../../store/authStore';
 import { NilType } from '../../types';
-import { getLatestTeamScore } from '../../utils/scoring';
+import { getLatestTeamScore, getTricksPerRound } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import EndGameDialog from '../../components/EndGameDialog';
 import SpectatorListDialog from '../../components/SpectatorListDialog';
@@ -70,6 +70,8 @@ export default function TricksView() {
 
   if (!currentGame) return null;
 
+  const tricksPerRound = getTricksPerRound(currentGame);
+
   const currentRound = currentGame.rounds.find(r => !r.isComplete)
     ?? currentGame.rounds[currentGame.rounds.length - 1];
   if (!currentRound) return null;
@@ -79,13 +81,13 @@ export default function TricksView() {
 
   const updateTricks = (playerId: string, delta: number) => {
     setTricks(prev => {
-      const next = Math.max(0, Math.min(13, prev[playerId] + delta));
+      const next = Math.max(0, Math.min(tricksPerRound, prev[playerId] + delta));
       return { ...prev, [playerId]: next };
     });
   };
 
   const totalTricks = Object.values(tricks).reduce((a, b) => a + b, 0);
-  const isValid = totalTricks === 13;
+  const isValid = totalTricks === tricksPerRound;
 
   const handleConfirm = () => {
     haptic('confirm');
@@ -94,7 +96,7 @@ export default function TricksView() {
     );
   };
 
-  const progressColor = totalTricks > 13 ? 'error' : totalTricks === 13 ? 'success' : 'primary';
+  const progressColor = totalTricks > tricksPerRound ? 'error' : totalTricks === tricksPerRound ? 'success' : 'primary';
   const completedRounds = currentGame.rounds.filter(r => r.isComplete);
 
   return (
@@ -144,7 +146,7 @@ export default function TricksView() {
               Round {currentGame.currentRound} · Enter Tricks
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Assign all 13 tricks
+              Assign all {tricksPerRound} tricks
             </Typography>
           </Box>
           {!editingRoundNumber && (
@@ -199,15 +201,15 @@ export default function TricksView() {
           </Typography>
           <Typography
             variant="caption"
-            color={totalTricks > 13 ? 'error' : totalTricks === 13 ? 'success.main' : 'text.secondary'}
+            color={totalTricks > tricksPerRound ? 'error' : totalTricks === tricksPerRound ? 'success.main' : 'text.secondary'}
             sx={{ fontWeight: 700, fontFamily: monoFont }}
           >
-            {totalTricks} / 13
+            {totalTricks} / {tricksPerRound}
           </Typography>
         </Box>
         <LinearProgress
           variant="determinate"
-          value={Math.min(100, (totalTricks / 13) * 100)}
+          value={Math.min(100, (totalTricks / tricksPerRound) * 100)}
           color={progressColor}
           sx={{ borderRadius: 4, height: 8, transition: 'all 0.3s ease' }}
         />
@@ -380,7 +382,7 @@ export default function TricksView() {
                         </Typography>
                         <IconButton
                           onClick={() => { haptic('light'); updateTricks(player.id, 1); }}
-                          disabled={totalTricks >= 13}
+                          disabled={totalTricks >= tricksPerRound}
                           sx={{
                             width: 48,
                             height: 48,
@@ -449,15 +451,15 @@ export default function TricksView() {
           zIndex: 10,
         }}
       >
-        {totalTricks !== 13 && (
+        {totalTricks !== tricksPerRound && (
           <Typography
             variant="body2"
-            color={totalTricks > 13 ? 'error' : 'text.secondary'}
+            color={totalTricks > tricksPerRound ? 'error' : 'text.secondary'}
             sx={{ textAlign: 'center', mb: 1, fontWeight: 600 }}
           >
-            {totalTricks > 13
-              ? `${totalTricks - 13} too many`
-              : `${13 - totalTricks} more trick${13 - totalTricks !== 1 ? 's' : ''} needed`}
+            {totalTricks > tricksPerRound
+              ? `${totalTricks - tricksPerRound} too many`
+              : `${tricksPerRound - totalTricks} more trick${tricksPerRound - totalTricks !== 1 ? 's' : ''} needed`}
           </Typography>
         )}
         <Button

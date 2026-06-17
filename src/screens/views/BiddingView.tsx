@@ -33,7 +33,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/gameStore';
 import { useAuthStore } from '../../store/authStore';
 import { NilType } from '../../types';
-import { getLatestTeamScore } from '../../utils/scoring';
+import { getLatestTeamScore, getTricksPerRound } from '../../utils/scoring';
 import ScoreHistoryTable from '../../components/ScoreHistoryTable';
 import RenameDialog from '../../components/RenameDialog';
 import EndGameDialog from '../../components/EndGameDialog';
@@ -82,11 +82,13 @@ export default function BiddingView() {
 
   if (!currentGame) return null;
 
+  const tricksPerRound = getTricksPerRound(currentGame);
+
   const updateBid = (playerId: string, delta: number) => {
     setBids(prev => {
       const cur = prev[playerId];
       if (cur.nilType !== 'none') return prev;
-      const next = Math.min(13, Math.max(0, cur.amount + delta));
+      const next = Math.min(tricksPerRound, Math.max(0, cur.amount + delta));
       return { ...prev, [playerId]: { ...cur, amount: next } };
     });
   };
@@ -97,7 +99,7 @@ export default function BiddingView() {
 
   const effectiveBid = (state: BidState) => (state.nilType !== 'none' ? 0 : state.amount);
 
-  const teamBid = (teamIdx: 0 | 1) =>
+  const teamBid = (teamIdx: number) =>
     currentGame.players
       .filter(p => p.teamIndex === teamIdx)
       .reduce((sum, p) => {
@@ -105,7 +107,7 @@ export default function BiddingView() {
         return b?.nilType !== 'none' ? sum : sum + (b?.amount ?? 0);
       }, 0);
 
-  const totalBids = teamBid(0) + teamBid(1);
+  const totalBids = currentGame.teams.reduce((sum, _, idx) => sum + teamBid(idx), 0);
 
   const handleConfirm = () => {
     haptic('confirm');
@@ -168,7 +170,7 @@ export default function BiddingView() {
               Round {currentGame.currentRound} · Place Bids
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              13 tricks in play
+              {tricksPerRound} tricks in play
             </Typography>
           </Box>
           {!editingRoundNumber && (
@@ -223,7 +225,7 @@ export default function BiddingView() {
       <Box sx={{ display: 'flex', px: 1.5, pt: 1, gap: 1 }}>
         {currentGame.teams.map((team, teamIdx) => {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
-          const tb = teamBid(teamIdx as 0 | 1);
+          const tb = teamBid(teamIdx);
           const isDouble = (currentGame.settings.doubleOn10 ?? true) && tb >= 10;
           const { score, bags } = getLatestTeamScore(currentGame, team.id);
           const hasHistory = completedRounds.length > 0;
@@ -373,7 +375,7 @@ export default function BiddingView() {
                           </Typography>
                           <IconButton
                             onClick={() => { haptic('light'); updateBid(player.id, 1); }}
-                            disabled={state.amount >= 13}
+                            disabled={state.amount >= tricksPerRound}
                             sx={{
                               width: 48,
                               height: 48,
@@ -440,7 +442,7 @@ export default function BiddingView() {
           onClick={handleConfirm}
           sx={{ py: 1.5, fontSize: '1.05rem', fontWeight: 700, minHeight: 56 }}
         >
-          Confirm Bids · {totalBids}/13
+          Confirm Bids · {totalBids}/{tricksPerRound}
         </Button>
       </Box>
 

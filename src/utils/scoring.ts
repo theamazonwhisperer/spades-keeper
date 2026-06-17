@@ -1,5 +1,10 @@
 import { Game, PlayerRoundData, TeamRoundScore, NilBonus } from '../types';
 
+/** Returns the number of tricks per round based on the game's player mode. */
+export function getTricksPerRound(game: Game): number {
+  return game.settings.playerMode === '3-player' ? 17 : 13;
+}
+
 /**
  * Calculate scores for a completed round.
  *
