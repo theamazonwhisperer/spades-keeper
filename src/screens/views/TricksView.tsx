@@ -216,7 +216,7 @@ export default function TricksView() {
       </Box>
 
       {/* Two-column player layout */}
-      <Box sx={{ display: 'flex', px: 1.5, pt: 1.5, gap: 1 }}>
+      <Box sx={{ display: 'flex', px: { xs: 0.75, sm: 1.5 }, pt: 1.5, gap: { xs: 0.5, sm: 1 } }}>
         {currentGame.teams.map((team, teamIdx) => {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
           const teamTricks = teamPlayers.reduce((sum, p) => sum + (tricks[p.id] ?? 0), 0);
@@ -232,7 +232,7 @@ export default function TricksView() {
           const hasHistory = completedRounds.length > 0;
 
           return (
-            <Box key={team.id} sx={{ flex: 1 }}>
+            <Box key={team.id} sx={{ flex: 1, minWidth: 0 }}>
               {/* Merged team header */}
               <Box
                 sx={{
@@ -301,7 +301,7 @@ export default function TricksView() {
                       transition: 'border-color 0.2s ease, background-color 0.2s ease',
                     }}
                   >
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <CardContent sx={{ p: { xs: 0.75, sm: 1.5 }, '&:last-child': { pb: { xs: 0.75, sm: 1.5 } } }}>
                       <Box
                         sx={{
                           display: 'flex',
@@ -311,7 +311,17 @@ export default function TricksView() {
                           mb: nilBroken ? 0.5 : 1,
                         }}
                       >
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        <Typography
+                          variant="h6"
+                          noWrap
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: 'clamp(0.9rem, 4vw, 1.25rem)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            minWidth: 0,
+                          }}
+                        >
                           {player.name}
                         </Typography>
                         {nilTag && (
@@ -352,29 +362,30 @@ export default function TricksView() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 1,
+                          gap: { xs: 0.5, sm: 1 },
                         }}
                       >
                         <IconButton
                           onClick={() => { haptic('light'); updateTricks(player.id, -1); }}
                           disabled={trickCount <= 0}
                           sx={{
-                            width: 48,
-                            height: 48,
+                            width: 'clamp(32px, 9vw, 48px)',
+                            height: 'clamp(32px, 9vw, 48px)',
                             bgcolor: alpha(theme.palette.primary.main, 0.1),
                             borderRadius: 2,
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                           }}
                         >
-                          <RemoveIcon />
+                          <RemoveIcon fontSize="small" />
                         </IconButton>
                         <Typography
                           variant="h4"
                           sx={{
                             fontWeight: 900,
-                            minWidth: 40,
+                            minWidth: 'clamp(20px, 6vw, 40px)',
                             textAlign: 'center',
                             fontFamily: monoFont,
+                            fontSize: 'clamp(1.1rem, 5vw, 2.125rem)',
                             color: nilBroken ? theme.palette.error.main : undefined,
                           }}
                         >
@@ -384,14 +395,14 @@ export default function TricksView() {
                           onClick={() => { haptic('light'); updateTricks(player.id, 1); }}
                           disabled={totalTricks >= tricksPerRound}
                           sx={{
-                            width: 48,
-                            height: 48,
+                            width: 'clamp(32px, 9vw, 48px)',
+                            height: 'clamp(32px, 9vw, 48px)',
                             bgcolor: alpha(theme.palette.primary.main, 0.1),
                             borderRadius: 2,
                             '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                           }}
                         >
-                          <AddIcon />
+                          <AddIcon fontSize="small" />
                         </IconButton>
                       </Box>
 

@@ -222,7 +222,7 @@ export default function BiddingView() {
       </Menu>
 
       {/* Bidding section */}
-      <Box sx={{ display: 'flex', px: 1.5, pt: 1, gap: 1 }}>
+      <Box sx={{ display: 'flex', px: { xs: 0.75, sm: 1.5 }, pt: 1, gap: { xs: 0.5, sm: 1 } }}>
         {currentGame.teams.map((team, teamIdx) => {
           const teamPlayers = currentGame.players.filter(p => p.teamIndex === teamIdx);
           const tb = teamBid(teamIdx);
@@ -231,7 +231,7 @@ export default function BiddingView() {
           const hasHistory = completedRounds.length > 0;
 
           return (
-            <Box key={team.id} sx={{ flex: 1 }}>
+            <Box key={team.id} sx={{ flex: 1, minWidth: 0 }}>
               {/* Merged team header */}
               <Box
                 sx={{
@@ -297,10 +297,18 @@ export default function BiddingView() {
                       )}`,
                     }}
                   >
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                    <CardContent sx={{ p: { xs: 0.75, sm: 1.5 }, '&:last-child': { pb: { xs: 0.75, sm: 1.5 } } }}>
                       <Typography
                         variant="h6"
-                        sx={{ textAlign: 'center', fontWeight: 700, mb: 1 }}
+                        noWrap
+                        sx={{
+                          textAlign: 'center',
+                          fontWeight: 700,
+                          mb: 1,
+                          fontSize: 'clamp(0.9rem, 4vw, 1.25rem)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
                       >
                         {player.name}
                       </Typography>
@@ -314,10 +322,10 @@ export default function BiddingView() {
                         fullWidth
                         sx={{ mb: 1.5 }}
                       >
-                        <ToggleButton value="nil" sx={{ fontSize: '0.8rem', py: 0.75, minHeight: 40, fontWeight: 600 }}>
+                        <ToggleButton value="nil" sx={{ fontSize: 'clamp(0.6rem, 2.8vw, 0.8rem)', px: 0.5, py: 0.75, minHeight: 40, fontWeight: 600 }}>
                           Nil
                         </ToggleButton>
-                        <ToggleButton value="blind_nil" sx={{ fontSize: '0.8rem', py: 0.75, minHeight: 40, fontWeight: 600 }}>
+                        <ToggleButton value="blind_nil" sx={{ fontSize: 'clamp(0.6rem, 2.8vw, 0.8rem)', px: 0.5, py: 0.75, minHeight: 40, fontWeight: 600 }}>
                           Blind Nil
                         </ToggleButton>
                       </ToggleButtonGroup>
@@ -351,25 +359,31 @@ export default function BiddingView() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: 1,
+                            gap: { xs: 0.5, sm: 1 },
                           }}
                         >
                           <IconButton
                             onClick={() => { haptic('light'); updateBid(player.id, -1); }}
                             disabled={state.amount <= 0}
                             sx={{
-                              width: 48,
-                              height: 48,
+                              width: 'clamp(32px, 9vw, 48px)',
+                              height: 'clamp(32px, 9vw, 48px)',
                               bgcolor: alpha(theme.palette.primary.main, 0.1),
                               borderRadius: 2,
                               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                             }}
                           >
-                            <RemoveIcon />
+                            <RemoveIcon fontSize="small" />
                           </IconButton>
                           <Typography
                             variant="h4"
-                            sx={{ fontWeight: 900, minWidth: 40, textAlign: 'center', fontFamily: monoFont }}
+                            sx={{
+                              fontWeight: 900,
+                              minWidth: 'clamp(20px, 6vw, 40px)',
+                              textAlign: 'center',
+                              fontFamily: monoFont,
+                              fontSize: 'clamp(1.1rem, 5vw, 2.125rem)',
+                            }}
                           >
                             {state.amount}
                           </Typography>
@@ -377,14 +391,14 @@ export default function BiddingView() {
                             onClick={() => { haptic('light'); updateBid(player.id, 1); }}
                             disabled={state.amount >= tricksPerRound}
                             sx={{
-                              width: 48,
-                              height: 48,
+                              width: 'clamp(32px, 9vw, 48px)',
+                              height: 'clamp(32px, 9vw, 48px)',
                               bgcolor: alpha(theme.palette.primary.main, 0.1),
                               borderRadius: 2,
                               '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                             }}
                           >
-                            <AddIcon />
+                            <AddIcon fontSize="small" />
                           </IconButton>
                         </Box>
                       )}
